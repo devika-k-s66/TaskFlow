@@ -1,5 +1,5 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import './HeroSection.css';
 import { ArrowRight } from 'lucide-react';
 
@@ -16,10 +16,10 @@ const HeroSection: React.FC = () => {
                 <div className="hero-navbar-wrapper">
                     <nav className="hero-navbar">
                         <ul className="hero-nav-links">
-                            <li><a href="#features">Features</a></li>
-                            <li><a href="#solutions">Solutions</a></li>
-                            <li><a href="#pricing">Pricing</a></li>
-                            <li><a href="#about">About</a></li>
+                            <li><Link to="/features">Features</Link></li>
+                            <li><Link to="/solutions">Solutions</Link></li>
+                            <li><Link to="/pricing">Pricing</Link></li>
+                            <li><Link to="/about">About</Link></li>
                         </ul>
                         <button className="hero-contact-btn" onClick={() => navigate('/login')}>
                             Sign In

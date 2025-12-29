@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
@@ -13,6 +13,10 @@ import RemindersPage from './pages/RemindersPage';
 import CalendarPage from './pages/CalendarPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import FeaturesPage from './pages/FeaturesPage';
+import SolutionsPage from './pages/SolutionsPage';
+import PricingPage from './pages/PricingPage';
+import AboutPage from './pages/AboutPage';
 import './index.css';
 
 function DashboardLayout() {
@@ -21,16 +25,7 @@ function DashboardLayout() {
       <Sidebar />
       <div className="main-content">
         <Header />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/tasks" element={<TasksPage />} />
-          <Route path="/automations" element={<AutomationsPage />} />
-          <Route path="/routines" element={<RoutinesPage />} />
-          <Route path="/reminders" element={<RemindersPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/reports" element={<ReportsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Routes>
+        <Outlet />
       </div>
     </div>
   );
@@ -44,19 +39,25 @@ function App() {
           {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/features" element={<FeaturesPage />} />
+          <Route path="/solutions" element={<SolutionsPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
+          <Route path="/about" element={<AboutPage />} />
 
-          {/* Protected Dashboard Routes */}
-          <Route
-            path="/dashboard/*"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Redirect /dashboard to /dashboard/ for proper routing */}
-          <Route path="/dashboard" element={<Navigate to="/dashboard/" replace />} />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }>
+            <Route index element={<Dashboard />} />
+            <Route path="tasks" element={<TasksPage />} />
+            <Route path="automations" element={<AutomationsPage />} />
+            <Route path="routines" element={<RoutinesPage />} />
+            <Route path="reminders" element={<RemindersPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="reports" element={<ReportsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
 
           {/* Catch all - redirect to home */}
           <Route path="*" element={<Navigate to="/" replace />} />

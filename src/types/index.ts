@@ -11,6 +11,7 @@ export interface Task {
   title: string;
   description?: string;
   deadline: Date;
+  endTime?: Date;
   priority: Priority;
   repeat: RepeatFrequency;
   tags: string[];

@@ -1,8 +1,41 @@
-import { Plus, Bell } from 'lucide-react';
-import { mockReminders } from '../data/mockData';
+import { useState } from 'react';
+import { Plus, Bell, Trash2, Check, Clock } from 'lucide-react';
+import { useReminders } from '../hooks/useFirestore';
 import { format } from 'date-fns';
+import type { RepeatFrequency } from '../types';
 
 export default function RemindersPage() {
+    const { reminders, loading, addReminder, deleteReminder, updateReminder } = useReminders();
+
+    // Form State
+    const [title, setTitle] = useState('');
+    const [time, setTime] = useState('');
+    const [repeat, setRepeat] = useState<RepeatFrequency>('None');
+
+    const handleAdd = async () => {
+        if (!title || !time) return;
+        try {
+            await addReminder({
+                title,
+                time: new Date(time),
+                repeat,
+                notificationType: ['Web'], // Default to Web for now
+                status: 'pending',
+                notes: ''
+            });
+            setTitle('');
+            setTime('');
+            setRepeat('None');
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleToggleStatus = (id: string, currentStatus: string) => {
+        const newStatus = currentStatus === 'pending' ? 'sent' : 'pending';
+        updateReminder(id, { status: newStatus as any });
+    };
+
     return (
         <div className="page-content fade-in" style={{ maxWidth: '1600px', margin: '0 auto' }}>
             <div className="page-title flex justify-between items-center">
@@ -12,13 +45,6 @@ export default function RemindersPage() {
                     }}>Reminders</h1>
                     <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.2rem' }}>Manage your notifications and alerts</p>
                 </div>
-                <button className="btn btn-lg" style={{
-                    background: 'white', color: '#667eea', fontWeight: '600', border: 'none',
-                    display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                }}>
-                    <Plus size={20} />
-                    Add Reminder
-                </button>
             </div>
 
             <div className="grid grid-3" style={{ gap: '24px', alignItems: 'start' }}>
@@ -36,54 +62,61 @@ export default function RemindersPage() {
                                 top: '20px',
                                 bottom: '20px',
                                 width: '2px',
-                                background: 'linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.1))' /* White gradient for glass theme */
+                                background: 'linear-gradient(180deg, rgba(255,255,255,0.5), rgba(255,255,255,0.1))'
                             }}></div>
 
-                            {mockReminders.map((reminder, index) => (
-                                <div
-                                    key={reminder.id}
-                                    style={{
-                                        position: 'relative',
-                                        marginBottom: '24px',
-                                        paddingBottom: index < mockReminders.length - 1 ? '24px' : '0'
-                                    }}
-                                >
-                                    {/* Timeline dot */}
-                                    <div style={{
-                                        position: 'absolute',
-                                        left: '-29px',
-                                        top: '24px',
-                                        width: '12px',
-                                        height: '12px',
-                                        borderRadius: '50%',
-                                        background: reminder.status === 'pending' ? '#fbbf24' : '#4ade80',
-                                        border: '3px solid rgba(255,255,255,0.2)', /* Glass border */
-                                        boxShadow: '0 0 0 2px rgba(0,0,0,0.1)'
-                                    }}></div>
-
-                                    {/* Reminder card */}
+                            {loading ? (
+                                <div style={{ color: 'white' }}>Loading reminders...</div>
+                            ) : reminders.length === 0 ? (
+                                <div style={{ color: 'rgba(255,255,255,0.6)', fontStyle: 'italic' }}>No pending reminders. Add one from the right sidebar.</div>
+                            ) : (
+                                reminders.sort((a, b) => a.time.getTime() - b.time.getTime()).map((reminder, index) => (
                                     <div
-                                        className="glass-clear"
+                                        key={reminder.id}
                                         style={{
-                                            padding: '24px',
-                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                            background: 'rgba(255,255,255,0.08)' /* Slightly darker nested glass */
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.transform = 'translateX(8px)';
-                                            e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.transform = 'translateX(0)';
-                                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                            position: 'relative',
+                                            marginBottom: '24px',
+                                            paddingBottom: '0'
                                         }}
                                     >
-                                        <div className="flex items-center justify-between">
+                                        {/* Timeline dot */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            left: '-29px',
+                                            top: '24px',
+                                            width: '12px',
+                                            height: '12px',
+                                            borderRadius: '50%',
+                                            background: reminder.status === 'pending' ? '#fbbf24' : '#4ade80',
+                                            border: '3px solid rgba(255,255,255,0.2)',
+                                            boxShadow: '0 0 0 2px rgba(0,0,0,0.1)'
+                                        }}></div>
+
+                                        {/* Reminder card */}
+                                        <div
+                                            className="glass-clear"
+                                            style={{
+                                                padding: '24px',
+                                                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                background: 'rgba(255,255,255,0.08)',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'start'
+                                            }}
+                                            onMouseEnter={(e) => {
+                                                e.currentTarget.style.transform = 'translateX(8px)';
+                                                e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                e.currentTarget.style.transform = 'translateX(0)';
+                                                e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                                            }}
+                                        >
                                             <div style={{ flex: 1 }}>
                                                 <div className="flex items-center gap-md mb-sm">
                                                     <Bell size={16} style={{ color: 'white' }} />
                                                     <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'white' }}>
-                                                        {format(reminder.time, 'h:mm a')}
+                                                        {format(reminder.time, 'MMM d, h:mm a')}
                                                     </span>
                                                     <span className="badge" style={{
                                                         background: reminder.status === 'pending' ? 'rgba(251, 191, 36, 0.2)' : 'rgba(74, 222, 128, 0.2)',
@@ -112,10 +145,29 @@ export default function RemindersPage() {
                                                     ))}
                                                 </div>
                                             </div>
+
+                                            <div className="flex flex-col gap-sm">
+                                                <button
+                                                    className="btn btn-sm btn-ghost"
+                                                    onClick={() => handleToggleStatus(reminder.id, reminder.status)}
+                                                    style={{ color: reminder.status === 'pending' ? 'white' : '#4ade80' }}
+                                                    title={reminder.status === 'pending' ? 'Mark as sent/done' : 'Mark as pending'}
+                                                >
+                                                    <Check size={18} />
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm btn-ghost"
+                                                    onClick={() => deleteReminder(reminder.id)}
+                                                    style={{ color: '#fca5a5' }}
+                                                    title="Delete Reminder"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
                     </div>
                 </div>
@@ -126,22 +178,50 @@ export default function RemindersPage() {
                         <h3 className="card-title mb-md" style={{ color: 'white' }}>Quick Add Reminder</h3>
                         <div className="form-group">
                             <label className="form-label" style={{ color: 'white' }}>Title</label>
-                            <input type="text" className="form-input" placeholder="Reminder title" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(5px)' }} />
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Reminder title"
+                                value={title}
+                                onChange={e => setTitle(e.target.value)}
+                                style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(5px)' }}
+                            />
                         </div>
                         <div className="form-group">
                             <label className="form-label" style={{ color: 'white' }}>Time</label>
-                            <input type="datetime-local" className="form-input" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(5px)' }} />
+                            <input
+                                type="datetime-local"
+                                className="form-input"
+                                value={time}
+                                onChange={e => setTime(e.target.value)}
+                                style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(5px)' }}
+                            />
                         </div>
                         <div className="form-group">
                             <label className="form-label" style={{ color: 'white' }}>Repeat</label>
-                            <select className="form-select" style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(5px)' }}>
-                                <option style={{ color: 'black' }}>None</option>
-                                <option style={{ color: 'black' }}>Daily</option>
-                                <option style={{ color: 'black' }}>Weekly</option>
-                                <option style={{ color: 'black' }}>Monthly</option>
+                            <select
+                                className="form-select"
+                                value={repeat}
+                                onChange={e => setRepeat(e.target.value as RepeatFrequency)}
+                                style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', backdropFilter: 'blur(5px)' }}
+                            >
+                                <option style={{ color: 'black' }} value="None">None</option>
+                                <option style={{ color: 'black' }} value="Daily">Daily</option>
+                                <option style={{ color: 'black' }} value="Weekly">Weekly</option>
+                                <option style={{ color: 'black' }} value="Monthly">Monthly</option>
                             </select>
                         </div>
-                        <button className="btn btn-lg w-full" style={{ background: 'white', color: '#667eea', fontWeight: '600', border: 'none' }}>Create Reminder</button>
+                        <button
+                            className="btn btn-lg w-full"
+                            onClick={handleAdd}
+                            disabled={!title || !time}
+                            style={{
+                                background: 'white', color: '#667eea', fontWeight: '600', border: 'none',
+                                opacity: (!title || !time) ? 0.6 : 1, cursor: (!title || !time) ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            Create Reminder
+                        </button>
                     </div>
 
                     <div className="glass-clear" style={{ padding: '24px' }}>

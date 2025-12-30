@@ -42,7 +42,7 @@ export const getTasks = async (userId: string): Promise<Task[]> => {
     }
 };
 
-export const addTask = async (userId: string, task: Omit<Task, 'id'>) => {
+export const addTask = async (userId: string, task: Omit<Task, 'id' | 'createdAt'>) => {
     try {
         const tasksRef = collection(db, `users/${userId}/tasks`);
         const docRef = await addDoc(tasksRef, {
@@ -93,7 +93,7 @@ export const getAutomations = async (userId: string): Promise<Automation[]> => {
     }
 };
 
-export const addAutomation = async (userId: string, automation: Omit<Automation, 'id'>) => {
+export const addAutomation = async (userId: string, automation: Omit<Automation, 'id' | 'createdAt'>) => {
     try {
         const automationsRef = collection(db, `users/${userId}/automations`);
         const docRef = await addDoc(automationsRef, {
@@ -144,7 +144,7 @@ export const getRoutines = async (userId: string): Promise<Routine[]> => {
     }
 };
 
-export const addRoutine = async (userId: string, routine: Omit<Routine, 'id'>) => {
+export const addRoutine = async (userId: string, routine: Omit<Routine, 'id' | 'createdAt'>) => {
     try {
         const routinesRef = collection(db, `users/${userId}/routines`);
         const docRef = await addDoc(routinesRef, {
@@ -195,7 +195,7 @@ export const getReminders = async (userId: string): Promise<Reminder[]> => {
     }
 };
 
-export const addReminder = async (userId: string, reminder: Omit<Reminder, 'id'>) => {
+export const addReminder = async (userId: string, reminder: Omit<Reminder, 'id' | 'createdAt'>) => {
     try {
         const remindersRef = collection(db, `users/${userId}/reminders`);
         const docRef = await addDoc(remindersRef, {

@@ -10,6 +10,7 @@ import {
     Settings,
     HelpCircle,
     LogOut,
+    X
 } from 'lucide-react';
 
 const navItems = [
@@ -23,11 +24,16 @@ const navItems = [
     { path: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     const location = useLocation();
 
     return (
-        <div className="sidebar">
+        <div className={`sidebar ${isOpen ? 'mobile-open' : ''}`}>
             <div className="sidebar-logo">
                 <div className="logo">
                     <div className="logo-icon">
@@ -35,6 +41,20 @@ export default function Sidebar() {
                     </div>
                     <span>TaskFlow</span>
                 </div>
+                {isOpen && (
+                    <button
+                        onClick={onClose}
+                        style={{
+                            marginLeft: 'auto',
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <X size={24} />
+                    </button>
+                )}
             </div>
 
             <nav className="sidebar-nav">
@@ -47,6 +67,9 @@ export default function Sidebar() {
                             key={item.path}
                             to={item.path}
                             className={`nav-item ${isActive ? 'active' : ''}`}
+                            onClick={() => {
+                                if (window.innerWidth < 768) onClose();
+                            }}
                         >
                             <Icon />
                             <span>{item.label}</span>
@@ -56,11 +79,11 @@ export default function Sidebar() {
             </nav>
 
             <div className="sidebar-footer">
-                <div className="nav-item">
+                <div className="nav-item" onClick={() => { if (window.innerWidth < 768) onClose(); }}>
                     <HelpCircle />
                     <span>Help</span>
                 </div>
-                <div className="nav-item">
+                <div className="nav-item" onClick={() => { if (window.innerWidth < 768) onClose(); }}>
                     <LogOut />
                     <span>Logout</span>
                 </div>

@@ -1,26 +1,46 @@
 import { TrendingUp, Zap, Clock, Award } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-
-const completionData = [
-    { name: 'Mon', completed: 8 },
-    { name: 'Tue', completed: 12 },
-    { name: 'Wed', completed: 10 },
-    { name: 'Thu', completed: 15 },
-    { name: 'Fri', completed: 14 },
-    { name: 'Sat', completed: 6 },
-    { name: 'Sun', completed: 8 },
-];
-
-const activityData = [
-    { hour: '6AM', tasks: 2 },
-    { hour: '9AM', tasks: 8 },
-    { hour: '12PM', tasks: 12 },
-    { hour: '3PM', tasks: 15 },
-    { hour: '6PM', tasks: 10 },
-    { hour: '9PM', tasks: 5 },
-];
+import { useTasks, useAutomations } from '../hooks/useFirestore';
+import { format, subDays, isSameDay } from 'date-fns';
 
 export default function ReportsPage() {
+    const { tasks, loading: tasksLoading } = useTasks();
+    const { automations, loading: automationsLoading } = useAutomations();
+
+    // Calculate Completion Rate
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.completed).length;
+    const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    // Calculate Active Automations
+    const activeAutomationsCount = automations.filter(a => a.enabled).length;
+
+    // Dynamic Chart Data: Last 7 Days Completion
+    const generateCompletionData = () => {
+        const data = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = subDays(new Date(), i);
+            const dayName = format(date, 'EEE');
+            // Mocking completion based on tasks due on that day (or created, for simplicity using random distribution if no real "completedAt" date exists)
+            // Since Task type doesn't have 'completedAt', using deadline or mocking based on current state is tricky.
+            // For now, let's just count tasks due on that day that are completed.
+            const count = tasks.filter(t => t.completed && isSameDay(t.deadline, date)).length;
+            data.push({ name: dayName, completed: count });
+        }
+        return data;
+    };
+    const completionData = generateCompletionData();
+
+    // Mock Activity Data (since we don't track activity logs yet)
+    const activityData = [
+        { hour: '6AM', tasks: 2 },
+        { hour: '9AM', tasks: 8 },
+        { hour: '12PM', tasks: 12 },
+        { hour: '3PM', tasks: 15 },
+        { hour: '6PM', tasks: 10 },
+        { hour: '9PM', tasks: 5 },
+    ];
+
     return (
         <div className="page-content fade-in" style={{ maxWidth: '1600px', margin: '0 auto' }}>
             <div className="page-title">
@@ -43,7 +63,7 @@ export default function ReportsPage() {
                         </div>
                         <div>
                             <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>Completion Rate</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>87%</h3>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>{completionRate}%</h3>
                         </div>
                     </div>
                 </div>
@@ -58,8 +78,8 @@ export default function ReportsPage() {
                             <Zap size={24} />
                         </div>
                         <div>
-                            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>Tasks Automated</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>142</h3>
+                            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>Tasks (Total)</p>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>{totalTasks}</h3>
                         </div>
                     </div>
                 </div>
@@ -74,8 +94,8 @@ export default function ReportsPage() {
                             <Clock size={24} />
                         </div>
                         <div>
-                            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>Time Saved</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>12.5h</h3>
+                            <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>Est. Time Saved</p>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>{(activeAutomationsCount * 1.5).toFixed(1)}h</h3>
                         </div>
                     </div>
                 </div>
@@ -91,7 +111,7 @@ export default function ReportsPage() {
                         </div>
                         <div>
                             <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}>Streak</p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>21 days</h3>
+                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'white' }}>? days</h3>
                         </div>
                     </div>
                 </div>
@@ -143,8 +163,8 @@ export default function ReportsPage() {
                         border: '1px solid rgba(10, 132, 255, 0.2)'
                     }}>
                         <p style={{ marginBottom: '8px', color: 'rgba(255,255,255,0.7)' }}>Tasks Auto-Generated</p>
-                        <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>142</h2>
-                        <p style={{ fontSize: '0.875rem', color: '#4ade80' }}>↑ 23% from last week</p>
+                        <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>--</h2>
+                        <p style={{ fontSize: '0.875rem', color: '#4ade80' }}>Data pending</p>
                     </div>
 
                     <div style={{
@@ -154,8 +174,8 @@ export default function ReportsPage() {
                         border: '1px solid rgba(52, 199, 89, 0.2)'
                     }}>
                         <p style={{ marginBottom: '8px', color: 'rgba(255,255,255,0.7)' }}>Hours Saved Weekly</p>
-                        <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>12.5</h2>
-                        <p style={{ fontSize: '0.875rem', color: '#4ade80' }}>↑ 15% efficiency gain</p>
+                        <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>{(activeAutomationsCount * 1.5).toFixed(1)}</h2>
+                        <p style={{ fontSize: '0.875rem', color: '#4ade80' }}>Based on active systems</p>
                     </div>
 
                     <div style={{
@@ -165,7 +185,7 @@ export default function ReportsPage() {
                         border: '1px solid rgba(255, 149, 0, 0.2)'
                     }}>
                         <p style={{ marginBottom: '8px', color: 'rgba(255,255,255,0.7)' }}>Active Automations</p>
-                        <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>8</h2>
+                        <h2 style={{ fontSize: '2.5rem', fontWeight: '700', color: 'white' }}>{activeAutomationsCount}</h2>
                         <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>Running 24/7</p>
                     </div>
                 </div>

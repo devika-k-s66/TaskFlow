@@ -3,6 +3,8 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import CreateTaskModal from './components/CreateTaskModal';
+import { useState } from 'react';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
@@ -20,12 +22,19 @@ import AboutPage from './pages/AboutPage';
 import './index.css';
 
 function DashboardLayout() {
+  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="app-container">
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="main-content">
-        <Header />
+        <Header
+          onCreateTask={() => setIsCreateTaskOpen(true)}
+          toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+        />
         <Outlet />
+        <CreateTaskModal isOpen={isCreateTaskOpen} onClose={() => setIsCreateTaskOpen(false)} />
       </div>
     </div>
   );

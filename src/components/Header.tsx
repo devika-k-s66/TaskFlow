@@ -1,15 +1,23 @@
-import { Search, Plus, Zap, Bell, LogOut } from 'lucide-react';
+import { Search, Plus, Zap, Bell, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface HeaderProps {
     onCreateTask?: () => void;
     onCreateAutomation?: () => void;
+    toggleSidebar?: () => void;
 }
 
-export default function Header({ onCreateTask, onCreateAutomation }: HeaderProps) {
+export default function Header({ onCreateTask, onCreateAutomation, toggleSidebar }: HeaderProps) {
     const { user, logout } = useAuth();
     const [showUserMenu, setShowUserMenu] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const handleLogout = async () => {
         try {
@@ -21,24 +29,48 @@ export default function Header({ onCreateTask, onCreateAutomation }: HeaderProps
 
     return (
         <div className="header">
-            <div className="search-bar">
-                <Search className="search-icon" size={18} />
-                <input
-                    type="text"
-                    className="search-input"
-                    placeholder="Search tasks, automations..."
-                />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                {isMobile && (
+                    <button
+                        onClick={toggleSidebar}
+                        style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        <Menu size={24} />
+                    </button>
+                )}
+
+                {!isMobile && (
+                    <div className="search-bar">
+                        <Search className="search-icon" size={18} />
+                        <input
+                            type="text"
+                            className="search-input"
+                            placeholder="Search tasks, automations..."
+                        />
+                    </div>
+                )}
             </div>
 
             <div className="header-actions">
                 <button className="header-btn primary" onClick={onCreateTask}>
                     <Plus size={18} />
-                    Create Task
+                    <span className={isMobile ? 'sr-only' : ''}>{isMobile ? '' : 'Create Task'}</span>
+                    {isMobile && <span style={{ fontSize: '0.8rem' }}>Task</span>}
                 </button>
-                <button className="header-btn secondary" onClick={onCreateAutomation}>
-                    <Zap size={18} />
-                    Quick Automation
-                </button>
+                {!isMobile && (
+                    <button className="header-btn secondary" onClick={onCreateAutomation}>
+                        <Zap size={18} />
+                        Quick Automation
+                    </button>
+                )}
                 <button className="notification-btn">
                     <Bell size={20} />
                     <span className="notification-badge"></span>
@@ -68,7 +100,7 @@ export default function Header({ onCreateTask, onCreateAutomation }: HeaderProps
                             zIndex: 1000
                         }}>
                             <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px' }}>
-                                <p style={{ fontWeight: '600', fontSize: '0.9375rem', marginBottom: '4px' }}>
+                                <p style={{ fontWeight: '600', fontSize: '0.9375rem', marginBottom: '4px', color: 'var(--text-primary)' }}>
                                     {user?.displayName || 'User'}
                                 </p>
                                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>

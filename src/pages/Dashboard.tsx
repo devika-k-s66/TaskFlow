@@ -20,15 +20,35 @@ export default function Dashboard() {
     }, []);
 
     const isMobile = width < 768;
-    const isTablet = width >= 768 && width < 1200; // Updated breakpoint
+    const isTablet = width >= 768 && width < 1200;
     const isSmallPhone = width < 480;
 
     // Calculate dynamic stats
+    const tasksToday = tasks.filter(t => isToday(t.deadline));
+    const tasksTodayPending = tasksToday.filter(t => !t.completed).length;
+    const tasksTodayCompleted = tasksToday.filter(t => t.completed).length;
+    const tasksTodayProgress = tasksToday.length > 0 ? (tasksTodayCompleted / tasksToday.length) * 100 : 0;
+
+    const automationsActive = automations.filter(a => a.enabled).length;
+    const automationsProgress = automations.length > 0 ? (automationsActive / automations.length) * 100 : 0;
+
+    const pendingReminders = reminders.filter(r => r.status === 'pending').length;
+    const completedReminders = reminders.filter(r => r.status === 'sent' || r.status === 'snoozed').length;
+    const totalReminders = reminders.length;
+    const remindersProgress = totalReminders > 0 ? (completedReminders / totalReminders) * 100 : 0;
+
+    const overdueTasks = tasks.filter(t => !t.completed && isPast(t.deadline) && !isToday(t.deadline)).length;
+    const overdueProgress = tasks.length > 0 ? (overdueTasks / tasks.length) * 100 : 0;
+
     const stats = {
-        tasksToday: tasks.filter(t => !t.completed && isToday(t.deadline)).length,
-        automationsRunning: automations.filter(a => a.enabled).length,
-        upcomingReminders: reminders.filter(r => r.status === 'pending').length,
-        overdueItems: tasks.filter(t => !t.completed && isPast(t.deadline) && !isToday(t.deadline)).length
+        tasksToday: tasksTodayPending,
+        tasksTodayProgress,
+        automationsRunning: automationsActive,
+        automationsProgress,
+        upcomingReminders: pendingReminders,
+        remindersProgress,
+        overdueItems: overdueTasks,
+        overdueProgress
     };
 
     const todayTasks = tasks.filter(t => !t.completed && (isToday(t.deadline) || t.priority === 'High')).slice(0, 4);
@@ -104,8 +124,8 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '8px' }}>Tasks Pending</p>
-                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px' }}>
-                                <div style={{ width: '60%', height: '100%', background: 'white', borderRadius: '99px' }}></div>
+                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ width: `${stats.tasksTodayProgress}%`, height: '100%', background: 'white', borderRadius: '99px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
                             </div>
                         </div>
                     </div>
@@ -124,8 +144,8 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '8px' }}>Active Automations</p>
-                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px' }}>
-                                <div style={{ width: '80%', height: '100%', background: '#4ade80', borderRadius: '99px' }}></div>
+                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ width: `${stats.automationsProgress}%`, height: '100%', background: '#4ade80', borderRadius: '99px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
                             </div>
                         </div>
                     </div>
@@ -144,8 +164,8 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '8px' }}>Reminders</p>
-                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px' }}>
-                                <div style={{ width: '40%', height: '100%', background: '#fbbf24', borderRadius: '99px' }}></div>
+                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ width: `${stats.remindersProgress}%`, height: '100%', background: '#fbbf24', borderRadius: '99px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
                             </div>
                         </div>
                     </div>
@@ -164,8 +184,8 @@ export default function Dashboard() {
                         </div>
                         <div>
                             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '8px' }}>Overdue</p>
-                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px' }}>
-                                <div style={{ width: '20%', height: '100%', background: '#f87171', borderRadius: '99px' }}></div>
+                            <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
+                                <div style={{ width: `${stats.overdueProgress}%`, height: '100%', background: '#f87171', borderRadius: '99px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
                             </div>
                         </div>
                     </div>
@@ -242,6 +262,7 @@ export default function Dashboard() {
                                                 <div className="flex items-center gap-sm">
                                                     <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                         <Clock size={12} /> {format(task.deadline, 'h:mm a')}
+                                                        {task.endTime && ` - ${format(task.endTime, 'h:mm a')}`}
                                                     </span>
                                                 </div>
                                             </div>
@@ -312,7 +333,6 @@ export default function Dashboard() {
                                 )}
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>

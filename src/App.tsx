@@ -21,19 +21,22 @@ import PricingPage from './pages/PricingPage';
 import AboutPage from './pages/AboutPage';
 import './index.css';
 
+import ReminderOrchestrator from './components/ReminderOrchestrator';
+
 function DashboardLayout() {
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
     <div className="app-container">
+      <ReminderOrchestrator />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="main-content">
         <Header
           onCreateTask={() => setIsCreateTaskOpen(true)}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
-        <Outlet />
+        <Outlet context={{ onCreateTask: () => setIsCreateTaskOpen(true) }} />
         <CreateTaskModal isOpen={isCreateTaskOpen} onClose={() => setIsCreateTaskOpen(false)} />
       </div>
     </div>

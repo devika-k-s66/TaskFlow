@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckSquare, Bell, Clock, LayoutGrid, List, TrendingUp, Activity, Zap } from 'lucide-react';
 import { useTasks, useReminders } from '../hooks/useFirestore';
 import {
@@ -14,8 +13,14 @@ import {
     startOfWeek,
     endOfWeek,
     addDays,
-    isToday as isTodayFn
+    isToday as isTodayFn,
+    startOfDay,
+    setHours,
+    setMinutes,
+    addMinutes as addMinutesFn
 } from 'date-fns';
+import { useState, useEffect } from 'react';
+import type { Priority } from '../types';
 
 type ViewMode = 'month' | 'week';
 
@@ -26,6 +31,49 @@ export default function CalendarPage() {
     const [viewMode, setViewMode] = useState<ViewMode>('month');
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
+
+    const [selectedDateForCreation, setSelectedDateForCreation] = useState<Date | null>(null);
+    const { addTask } = useTasks();
+
+    // Creation States
+    const [taskTitle, setTaskTitle] = useState('');
+    const [taskDesc, setTaskDesc] = useState('');
+    const [taskPriority, setTaskPriority] = useState<Priority>('Medium');
+    const [taskDuration, setTaskDuration] = useState(60);
+    const [taskStartTime, setTaskStartTime] = useState<Date | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleDateClick = (dayNum: number) => {
+        const selected = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
+        setSelectedDateForCreation(selected);
+    };
+
+    const handleSaveTask = async () => {
+        if (!taskTitle.trim() || !taskStartTime || !selectedDateForCreation) return;
+        setIsSaving(true);
+        try {
+            await addTask({
+                title: taskTitle,
+                description: taskDesc,
+                priority: taskPriority,
+                deadline: taskStartTime,
+                endTime: addMinutesFn(taskStartTime, taskDuration),
+                completed: false,
+                repeat: 'None',
+                tags: []
+            });
+            setSelectedDateForCreation(null);
+            setTaskTitle('');
+            setTaskDesc('');
+            setTaskStartTime(null);
+            setTaskPriority('Medium');
+            setTaskDuration(60);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     useEffect(() => {
         const handleResize = () => {
@@ -99,7 +147,7 @@ export default function CalendarPage() {
         const dayReminders = reminders.filter(r => r.status === 'pending' && isSameDay(r.time, date));
 
         return [
-            ...dayTasks.map(t => ({ id: t.id, title: t.title, type: 'task' as const, priority: t.priority })),
+            ...dayTasks.map(t => ({ id: t.id, title: t.title, type: 'task' as const, priority: t.priority, start: t.deadline, end: t.endTime })),
             ...dayReminders.map(r => ({ id: r.id, title: r.title, type: 'reminder' as const }))
         ];
     };
@@ -607,6 +655,7 @@ export default function CalendarPage() {
                                             e.currentTarget.style.zIndex = '1';
                                         }
                                     }}
+                                    onClick={() => day && handleDateClick(day as number)}
                                 >
                                     {day && (
                                         <>
@@ -869,6 +918,321 @@ export default function CalendarPage() {
                     </div>
                 </div>
             )}
+
+            {selectedDateForCreation && (
+                <PlanningPageView
+                    selectedDate={selectedDateForCreation}
+                    onClose={() => setSelectedDateForCreation(null)}
+                    onSave={handleSaveTask}
+                    title={taskTitle} setTitle={setTaskTitle}
+                    desc={taskDesc} setDesc={setTaskDesc}
+                    priority={taskPriority} setPriority={setTaskPriority}
+                    duration={taskDuration} setDuration={setTaskDuration}
+                    startTime={taskStartTime} setStartTime={setTaskStartTime}
+                    isSaving={isSaving}
+                    isMobile={isMobile}
+                    getEventsForDay={getEventsForDay}
+                />
+            )}
+        </div>
+    );
+}
+
+// Sub-component for Planning View for better organization
+function PlanningPageView({
+    selectedDate,
+    onClose,
+    onSave,
+    title, setTitle,
+    desc, setDesc,
+    priority, setPriority,
+    duration, setDuration,
+    startTime, setStartTime,
+    isSaving,
+    isMobile,
+    getEventsForDay
+}: any) {
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: '#09090b', zIndex: 4000, overflowY: 'auto',
+            animation: 'fadeIn 0.3s ease-out',
+            color: 'white',
+            fontFamily: "'Inter', sans-serif"
+        }}>
+            <style>{`
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes pulseGlow { 0% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.2); } 50% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); } 100% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.2); } }
+                .planning-input:focus { border-color: #667eea !important; box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15); outline: none; background: rgba(255,255,255,0.06) !important; }
+                .glass-card { 
+                    background: rgba(255,255,255,0.03); 
+                    border: 1px solid rgba(255,255,255,0.08); 
+                    border-radius: 20px; 
+                    padding: 24px; 
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    backdrop-filter: blur(12px);
+                }
+                .glass-card:hover { 
+                    background: rgba(255,255,255,0.05); 
+                    border-color: rgba(255,255,255,0.15);
+                    transform: translateY(-2px);
+                    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+                }
+                .timeline-item {
+                    transition: all 0.2s ease;
+                }
+                .timeline-item:hover { 
+                    background: rgba(255,255,255,0.08) !important; 
+                    border-color: rgba(102, 126, 234, 0.4) !important;
+                    transform: translateX(4px);
+                }
+                .primary-btn {
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                    overflow: hidden;
+                }
+                .primary-btn:hover:not(:disabled) {
+                    transform: translateY(-3px) scale(1.02);
+                    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+                    filter: brightness(1.1);
+                }
+                .primary-btn:active:not(:disabled) {
+                    transform: translateY(-1px) scale(0.98);
+                }
+                .exit-btn {
+                    transition: all 0.2s ease;
+                }
+                .exit-btn:hover {
+                    background: rgba(239, 68, 68, 0.1) !important;
+                    border-color: rgba(239, 68, 68, 0.3) !important;
+                    color: #fca5a5 !important;
+                    transform: scale(1.05);
+                }
+                ::-webkit-scrollbar { width: 6px; }
+                ::-webkit-scrollbar-track { background: transparent; }
+                ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+                ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+            `}</style>
+
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '20px' : '60px 40px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#667eea', fontWeight: '600', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '2px', marginBottom: '12px' }}>
+                            <Zap size={16} />
+                            Task Planning
+                        </div>
+                        <h1 style={{ fontSize: isMobile ? '2rem' : '3.5rem', fontWeight: '800', margin: 0, letterSpacing: '-1.5px' }}>
+                            {format(selectedDate, 'EEEE, MMM do')}
+                        </h1>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="exit-btn"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' }}
+                    >
+                        Exit Planner
+                    </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr', gap: '32px' }}>
+                    {/* Form Section */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                        <div className="glass-card">
+                            <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Task Title</label>
+                            <input
+                                autoFocus
+                                className="planning-input"
+                                placeholder="What needs to be done?"
+                                value={title}
+                                onChange={e => setTitle(e.target.value)}
+                                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '18px', borderRadius: '12px', fontSize: '1.25rem', fontWeight: '500' }}
+                            />
+                        </div>
+
+                        <div className="glass-card">
+                            <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Detailed Mission Description (Optional)</label>
+                            <textarea
+                                placeholder="Add notes, links, or expectations..."
+                                value={desc}
+                                onChange={e => setDesc(e.target.value)}
+                                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '18px', borderRadius: '12px', fontSize: '1rem', minHeight: '120px', resize: 'vertical' }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                            <div className="glass-card">
+                                <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Set Priority</label>
+                                <select
+                                    value={priority}
+                                    onChange={e => setPriority(e.target.value)}
+                                    style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '16px', borderRadius: '12px', fontSize: '1rem' }}
+                                >
+                                    <option value="High">🔴 High Priority</option>
+                                    <option value="Medium">🟡 Medium Priority</option>
+                                    <option value="Low">🟢 Low Priority</option>
+                                </select>
+                            </div>
+                            <div className="glass-card">
+                                <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Estimated Duration</label>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <input
+                                        type="number"
+                                        value={duration}
+                                        onChange={e => setDuration(parseInt(e.target.value) || 0)}
+                                        style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '16px', borderRadius: '12px', fontSize: '1.25rem', fontWeight: '600' }}
+                                    />
+                                    <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '500' }}>min</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="glass-card" style={{ border: '1px solid rgba(102, 126, 234, 0.3)', background: 'rgba(102, 126, 234, 0.03)' }}>
+                            <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Exact Start Time</label>
+                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                <input
+                                    type="time"
+                                    className="planning-input"
+                                    value={startTime ? format(startTime, 'HH:mm') : ''}
+                                    onChange={e => {
+                                        if (!e.target.value) return;
+                                        const [h, m] = e.target.value.split(':').map(Number);
+                                        setStartTime(setHours(setMinutes(startOfDay(selectedDate), m), h));
+                                    }}
+                                    style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '20px', borderRadius: '12px', fontSize: '1.5rem', fontWeight: '700', transition: 'all 0.2s' }}
+                                />
+                                <div style={{ textAlign: 'center', minWidth: '100px' }}>
+                                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>Ending At</span>
+                                    <span style={{ fontSize: '1rem', fontWeight: '600', color: '#667eea' }}>
+                                        {startTime ? format(addMinutesFn(startTime, duration), 'h:mm a') : '--:--'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={onSave}
+                            disabled={!title.trim() || !startTime || isSaving}
+                            className="primary-btn"
+                            style={{
+                                marginTop: '10px',
+                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                border: 'none',
+                                color: 'white',
+                                padding: '24px',
+                                borderRadius: '16px',
+                                fontWeight: '800',
+                                fontSize: '1.2rem',
+                                cursor: 'pointer',
+                                boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
+                                opacity: (!title.trim() || !startTime || isSaving) ? 0.5 : 1,
+                            }}
+                        >
+                            {isSaving ? 'Building Mission...' : 'Schedule Task'}
+                        </button>
+                    </div>
+
+                    {/* Timeline Section */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>Schedule & Gaps</h3>
+                            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>Click a gap to select</span>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '720px', overflowY: 'auto', paddingRight: '8px' }}>
+                            {(() => {
+                                const events = getEventsForDay(selectedDate)
+                                    .filter((e: any) => e.type === 'task')
+                                    .sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime());
+
+                                const dayTimeline: any[] = [];
+                                let lastTime = startOfDay(selectedDate);
+
+                                events.forEach((event: any) => {
+                                    const eStart = new Date(event.start);
+                                    const eEnd = event.end ? new Date(event.end) : addMinutesFn(eStart, 30);
+
+                                    if (eStart > lastTime) {
+                                        dayTimeline.push({
+                                            type: 'free',
+                                            start: lastTime,
+                                            end: eStart,
+                                            duration: (eStart.getTime() - lastTime.getTime()) / (1000 * 60)
+                                        });
+                                    }
+
+                                    dayTimeline.push({
+                                        type: 'task',
+                                        title: event.title,
+                                        start: eStart,
+                                        end: eEnd
+                                    });
+
+                                    lastTime = eEnd;
+                                });
+
+                                const endOfDay = setHours(setMinutes(startOfDay(selectedDate), 59), 23);
+                                if (lastTime < endOfDay) {
+                                    dayTimeline.push({
+                                        type: 'free',
+                                        start: lastTime,
+                                        end: endOfDay,
+                                        duration: (endOfDay.getTime() - lastTime.getTime()) / (1000 * 60)
+                                    });
+                                }
+
+                                return dayTimeline.map((item, i) => {
+                                    const isSelected = item.type === 'free' && startTime && item.start.getTime() === startTime.getTime();
+                                    const canFit = item.type === 'free' && item.duration >= duration;
+
+                                    return (
+                                        <div
+                                            key={i}
+                                            className="timeline-item"
+                                            onClick={() => item.type === 'free' && setStartTime(item.start)}
+                                            style={{
+                                                padding: '16px',
+                                                borderRadius: '12px',
+                                                background: isSelected ? 'rgba(102, 126, 234, 0.2)' : item.type === 'task' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.03)',
+                                                border: '1px solid',
+                                                borderColor: isSelected ? '#667eea' : item.type === 'task' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.08)',
+                                                cursor: item.type === 'task' ? 'default' : 'pointer',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                opacity: item.type === 'free' && !canFit ? 0.6 : 1
+                                            }}
+                                        >
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'white' }}>
+                                                    {format(item.start, 'h:mm a')} - {format(item.end, 'h:mm a')}
+                                                </div>
+                                                {item.type === 'free' && (
+                                                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
+                                                        {Math.floor(item.duration)} min available
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {item.type === 'task' ? (
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#fca5a5' }}>OCCUPIED</div>
+                                                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
+                                                </div>
+                                            ) : isSelected ? (
+                                                <div style={{ background: '#667eea', color: 'white', fontSize: '0.7rem', fontWeight: '800', padding: '4px 8px', borderRadius: '4px' }}>SELECTED</div>
+                                            ) : canFit ? (
+                                                <div style={{ color: '#667eea', fontSize: '0.75rem', fontWeight: '600' }}>Plan here</div>
+                                            ) : (
+                                                <div style={{ color: 'rgba(239, 68, 68, 0.5)', fontSize: '0.75rem' }}>Too short</div>
+                                            )}
+                                        </div>
+                                    );
+                                });
+                            })()}
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 }

@@ -1,17 +1,22 @@
 import { Search, Plus, Zap, Bell, LogOut, Menu } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
-    onCreateTask?: () => void;
     onCreateAutomation?: () => void;
     toggleSidebar?: () => void;
 }
 
-export default function Header({ onCreateTask, onCreateAutomation, toggleSidebar }: HeaderProps) {
+export default function Header({ onCreateAutomation, toggleSidebar }: HeaderProps) {
     const { user, logout } = useAuth();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const navigate = useNavigate();
+
+    const handleCreateTaskClick = () => {
+        navigate('/dashboard/calendar');
+    };
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -60,7 +65,7 @@ export default function Header({ onCreateTask, onCreateAutomation, toggleSidebar
             </div>
 
             <div className="header-actions">
-                <button className="header-btn primary" onClick={onCreateTask}>
+                <button className="header-btn primary" onClick={handleCreateTaskClick}>
                     <Plus size={18} />
                     <span className={isMobile ? 'sr-only' : ''}>{isMobile ? '' : 'Create Task'}</span>
                     {isMobile && <span style={{ fontSize: '0.8rem' }}>Task</span>}

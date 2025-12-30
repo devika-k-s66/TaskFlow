@@ -1,265 +1,305 @@
 import { useState, useEffect } from 'react';
-import { Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { format, isSameDay, startOfDay, addMinutes, setHours, setMinutes } from 'date-fns';
 import { useTasks } from '../hooks/useFirestore';
-import type { Task } from '../types';
+import type { Priority, RepeatFrequency } from '../types';
 
 interface CreateTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProps) {
-    const { addTask } = useTasks();
+type Step = 'details' | 'time';
 
-    const [newTaskTitle, setNewTaskTitle] = useState('');
-    const [newTaskPriority, setNewTaskPriority] = useState<Task['priority']>('Medium');
-    const [newTaskDeadline, setNewTaskDeadline] = useState('');
-    const [newTaskEndTime, setNewTaskEndTime] = useState('');
-    const [newTaskTags, setNewTaskTags] = useState('');
-    const [newTaskDesc, setNewTaskDesc] = useState('');
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [width, setWidth] = useState(window.innerWidth);
+export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProps) {
+    const { addTask, tasks } = useTasks();
+    const [step, setStep] = useState<Step>('details');
+    const [loading, setLoading] = useState(false);
+
+    // Task State
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [priority, setPriority] = useState<Priority>('Medium');
+    const [repeat, setRepeat] = useState<RepeatFrequency>('None');
+    const [tags, setTags] = useState<string[]>([]);
+    const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+    const [startTime, setStartTime] = useState<Date | null>(null);
+    const [duration, setDuration] = useState(60); // minutes
 
     useEffect(() => {
-        const handleResize = () => setWidth(window.innerWidth);
-        window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        const handleExternalOpen = (e: any) => {
+            if (e.detail?.date) {
+                setSelectedDate(e.detail.date);
+                setStep('details');
+            }
+        };
+        window.addEventListener('openCreateTask', handleExternalOpen);
+        return () => window.removeEventListener('openCreateTask', handleExternalOpen);
     }, []);
 
-    const isMobile = width < 600;
-
-    const handleCreate = async () => {
-        if (!newTaskTitle) {
-            return;
+    useEffect(() => {
+        if (!isOpen) {
+            setStep('details');
+            setTitle('');
+            setDescription('');
+            setPriority('Medium');
+            setRepeat('None');
+            setTags([]);
+            setStartTime(null);
+            setDuration(60);
         }
-
-        setIsSubmitting(true);
-        try {
-            const taskDeadline = newTaskDeadline ? new Date(newTaskDeadline) : new Date();
-
-            let taskEndTime = undefined;
-            if (newTaskEndTime) {
-                const [datePart] = newTaskDeadline.split('T');
-                taskEndTime = new Date(`${datePart || new Date().toISOString().split('T')[0]}T${newTaskEndTime}`);
-            }
-
-            const taskData: Omit<Task, 'id' | 'createdAt'> = {
-                title: newTaskTitle,
-                description: newTaskDesc || '',
-                completed: false,
-                priority: newTaskPriority,
-                deadline: taskDeadline,
-                endTime: taskEndTime,
-                tags: newTaskTags ? newTaskTags.split(',').map(t => t.trim()).filter(Boolean) : [],
-                repeat: 'None'
-            };
-
-            await addTask(taskData);
-            handleClose();
-        } catch (error) {
-            console.error("Failed to create task", error);
-            alert(`Error creating task: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        } finally {
-            setIsSubmitting(false);
-        }
-    };
-
-    const handleClose = () => {
-        setNewTaskTitle('');
-        setNewTaskDesc('');
-        setNewTaskPriority('Medium');
-        setNewTaskDeadline('');
-        setNewTaskEndTime('');
-        setNewTaskTags('');
-        onClose();
-    };
+    }, [isOpen]);
 
     if (!isOpen) return null;
+
+    const handleCreate = async () => {
+        if (!title.trim() || !startTime) return;
+
+        setLoading(true);
+        try {
+            const deadline = startTime;
+            const endTime = addMinutes(startTime, duration);
+
+            await addTask({
+                title,
+                description,
+                priority,
+                repeat,
+                tags,
+                deadline,
+                endTime,
+                completed: false
+            });
+            onClose();
+        } catch (error) {
+            console.error('Error adding task:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
 
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
-            fontFamily: "'Montserrat', sans-serif",
-            padding: isMobile ? '12px' : '20px'
-        }} onClick={handleClose}>
+            background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000,
+            padding: '20px'
+        }}>
             <div className="glass-clear" style={{
-                width: '100%', maxWidth: '480px',
-                maxHeight: '94vh',
-                overflowY: 'auto',
-                padding: isMobile ? '20px' : '28px',
-                background: 'rgba(30, 20, 50, 0.4)',
-                backdropFilter: 'blur(50px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                boxShadow: '0 30px 60px -12px rgba(0, 0, 0, 0.5)',
-                borderRadius: isMobile ? '20px' : '24px',
-                color: 'white',
-                position: 'relative',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none'
-            }} onClick={e => e.stopPropagation()}>
-
-                {/* Header - Compact */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? '16px' : '20px' }}>
-                    <h2 style={{ fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: '700', color: 'white', letterSpacing: '-0.5px', margin: 0 }}>New Mission</h2>
-                    <button onClick={handleClose} style={{
-                        background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer', color: 'white',
-                        width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        <X size={16} />
+                width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'hidden',
+                display: 'flex', flexDirection: 'column', position: 'relative'
+            }}>
+                <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h2 style={{ color: 'white', margin: 0, fontSize: '1.25rem' }}>
+                        {step === 'details' ? 'Task Details' : 'Select Time'}
+                    </h2>
+                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
+                        <X size={24} />
                     </button>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '14px' }}>
-                    {/* Title */}
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Task Title</label>
-                        <input
-                            type="text"
-                            value={newTaskTitle}
-                            onChange={e => setNewTaskTitle(e.target.value)}
-                            placeholder="Objective name..."
-                            autoFocus
-                            style={{
-                                width: '100%', padding: '10px 14px', borderRadius: '10px',
-                                border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem',
-                                background: 'rgba(255,255,255,0.06)', color: 'white',
-                                outline: 'none', fontFamily: "'Montserrat', sans-serif"
-                            }}
-                        />
-                    </div>
+                <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
+                    <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 0, marginBottom: '20px', fontSize: '0.9rem' }}>
+                        Creating task for <strong>{format(selectedDate, 'MMMM d, yyyy')}</strong>
+                    </p>
 
-                    {/* Description */}
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</label>
-                        <textarea
-                            value={newTaskDesc}
-                            onChange={e => setNewTaskDesc(e.target.value)}
-                            placeholder="Brief details..."
-                            style={{
-                                width: '100%', padding: '10px 14px', borderRadius: '10px',
-                                border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem',
-                                background: 'rgba(255,255,255,0.06)', color: 'white',
-                                minHeight: '35px', maxHeight: '55px', outline: 'none', fontFamily: "'Montserrat', sans-serif", resize: 'none'
-                            }}
-                        />
-                    </div>
+                    {step === 'details' && (
+                        <div className="fade-in">
+                            <div className="form-group">
+                                <label className="form-label" style={{ color: 'white' }}>Task Title</label>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    className="form-input"
+                                    placeholder="Enter task name"
+                                    value={title}
+                                    onChange={e => setTitle(e.target.value)}
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                                />
+                            </div>
 
-                    {/* Priority & Date Row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Priority</label>
-                            <select
-                                value={newTaskPriority}
-                                onChange={e => setNewTaskPriority(e.target.value as any)}
-                                style={{
-                                    width: '100%', padding: '10px 12px', borderRadius: '10px',
-                                    border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem',
-                                    background: 'rgba(255,255,255,0.06)', color: 'white',
-                                    outline: 'none', fontFamily: "'Montserrat', sans-serif", cursor: 'pointer'
-                                }}
-                            >
-                                <option value="Low" style={{ background: '#1e1b4b' }}>Low</option>
-                                <option value="Medium" style={{ background: '#1e1b4b' }}>Medium</option>
-                                <option value="High" style={{ background: '#1e1b4b' }}>High</option>
-                            </select>
+                            <div className="form-group">
+                                <label className="form-label" style={{ color: 'white' }}>Description</label>
+                                <textarea
+                                    className="form-input"
+                                    placeholder="Enter details..."
+                                    value={description}
+                                    onChange={e => setDescription(e.target.value)}
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', minHeight: '80px' }}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label className="form-label" style={{ color: 'white' }}>Priority</label>
+                                <select
+                                    className="form-select"
+                                    value={priority}
+                                    onChange={e => setPriority(e.target.value as Priority)}
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                                >
+                                    <option value="High" style={{ color: 'black' }}>High</option>
+                                    <option value="Medium" style={{ color: 'black' }}>Medium</option>
+                                    <option value="Low" style={{ color: 'black' }}>Low</option>
+                                </select>
+                            </div>
                         </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date</label>
-                            <input
-                                type="date"
-                                value={newTaskDeadline.split('T')[0] || ''}
-                                onChange={e => {
-                                    const time = newTaskDeadline.split('T')[1] || '12:00';
-                                    setNewTaskDeadline(`${e.target.value}T${time}`);
-                                }}
-                                style={{
-                                    width: '100%', padding: '10px 12px', borderRadius: '10px',
-                                    border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem',
-                                    background: 'rgba(255,255,255,0.06)', color: 'white',
-                                    outline: 'none', fontFamily: "'Montserrat', sans-serif", colorScheme: 'dark'
-                                }}
-                            />
-                        </div>
-                    </div>
+                    )}
 
-                    {/* Start & End Time Row */}
-                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '12px' }}>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Start</label>
-                            <input
-                                type="time"
-                                value={newTaskDeadline.split('T')[1] || ''}
-                                onChange={e => {
-                                    const date = newTaskDeadline.split('T')[0] || new Date().toISOString().split('T')[0];
-                                    setNewTaskDeadline(`${date}T${e.target.value}`);
-                                }}
-                                style={{
-                                    width: '100%', padding: '10px 12px', borderRadius: '10px',
-                                    border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem',
-                                    background: 'rgba(255,255,255,0.06)', color: 'white',
-                                    outline: 'none', fontFamily: "'Montserrat', sans-serif", colorScheme: 'dark'
-                                }}
-                            />
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>End</label>
-                            <input
-                                type="time"
-                                value={newTaskEndTime}
-                                onChange={e => setNewTaskEndTime(e.target.value)}
-                                style={{
-                                    width: '100%', padding: '10px 12px', borderRadius: '10px',
-                                    border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem',
-                                    background: 'rgba(255,255,255,0.06)', color: 'white',
-                                    outline: 'none', fontFamily: "'Montserrat', sans-serif", colorScheme: 'dark'
-                                }}
-                            />
-                        </div>
-                    </div>
+                    {step === 'time' && (
+                        <div className="fade-in">
+                            <div className="form-group">
+                                <label className="form-label" style={{ color: 'white' }}>Duration (minutes)</label>
+                                <input
+                                    type="number"
+                                    className="form-input"
+                                    value={duration}
+                                    onChange={e => setDuration(parseInt(e.target.value) || 0)}
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                                />
+                            </div>
 
-                    {/* Tags */}
-                    <div>
-                        <label style={{ display: 'block', marginBottom: '4px', fontWeight: '600', color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tags</label>
-                        <input
-                            type="text"
-                            value={newTaskTags}
-                            onChange={e => setNewTaskTags(e.target.value)}
-                            placeholder="e.g. Work, Urgent"
-                            style={{
-                                width: '100%', padding: '10px 14px', borderRadius: '10px',
-                                border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.85rem',
-                                background: 'rgba(255,255,255,0.06)', color: 'white',
-                                outline: 'none', fontFamily: "'Montserrat', sans-serif"
-                            }}
-                        />
-                    </div>
+                            <div className="form-group">
+                                <label className="form-label" style={{ color: 'white' }}>Manual Time Selection</label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input
+                                        type="time"
+                                        className="form-input"
+                                        value={startTime ? format(startTime, 'HH:mm') : ''}
+                                        onChange={e => {
+                                            if (!e.target.value) return;
+                                            const [h, m] = e.target.value.split(':').map(Number);
+                                            setStartTime(setHours(setMinutes(startOfDay(selectedDate), m), h));
+                                        }}
+                                        style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
+                                    />
+                                </div>
+                            </div>
 
-                    {/* Submit - Ultra Compact */}
-                    <button
-                        onClick={handleCreate}
-                        disabled={!newTaskTitle || isSubmitting}
-                        style={{
-                            marginTop: isMobile ? '4px' : '6px',
-                            padding: isMobile ? '12px' : '14px',
-                            background: newTaskTitle && !isSubmitting ? 'white' : 'rgba(255,255,255,0.1)',
-                            color: newTaskTitle && !isSubmitting ? '#667eea' : 'rgba(255,255,255,0.2)',
-                            border: 'none',
-                            borderRadius: '14px',
-                            fontSize: isMobile ? '0.85rem' : '0.9rem',
-                            fontWeight: '700',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '8px',
-                            cursor: newTaskTitle && !isSubmitting ? 'pointer' : 'not-allowed',
-                            transition: 'all 0.2s',
-                            fontFamily: "'Montserrat', sans-serif"
-                        }}
-                    >
-                        {isSubmitting ? 'Syncing...' : <><Plus size={18} /> Create Mission</>}
-                    </button>
+                            <label className="form-label" style={{ color: 'white', marginTop: '10px' }}>Suggested Gaps & Schedule</label>
+                            <div style={{
+                                display: 'flex', flexDirection: 'column', gap: '8px',
+                                maxHeight: '300px', overflowY: 'auto', paddingRight: '10px'
+                            }}>
+                                {(() => {
+                                    const dayTasks = tasks
+                                        .filter(t => !t.completed && isSameDay(t.deadline, selectedDate))
+                                        .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+
+                                    const dayTimeline: any[] = [];
+                                    let lastTime = startOfDay(selectedDate);
+
+                                    dayTasks.forEach(task => {
+                                        const tStart = new Date(task.deadline);
+                                        const tEnd = task.endTime ? new Date(task.endTime) : addMinutes(tStart, 30);
+
+                                        if (tStart > lastTime) {
+                                            dayTimeline.push({
+                                                type: 'free',
+                                                start: lastTime,
+                                                end: tStart,
+                                                duration: (tStart.getTime() - lastTime.getTime()) / (1000 * 60)
+                                            });
+                                        }
+
+                                        dayTimeline.push({
+                                            type: 'task',
+                                            title: task.title,
+                                            start: tStart,
+                                            end: tEnd
+                                        });
+
+                                        lastTime = tEnd;
+                                    });
+
+                                    const endOfDay = setHours(setMinutes(startOfDay(selectedDate), 59), 23);
+                                    if (lastTime < endOfDay) {
+                                        dayTimeline.push({
+                                            type: 'free',
+                                            start: lastTime,
+                                            end: endOfDay,
+                                            duration: (endOfDay.getTime() - lastTime.getTime()) / (1000 * 60)
+                                        });
+                                    }
+
+                                    return dayTimeline.map((item, i) => {
+                                        const isSelected = item.type === 'free' && startTime && item.start.getTime() === startTime.getTime();
+                                        const canFit = item.type === 'free' && item.duration >= duration;
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                onClick={() => item.type === 'free' && setStartTime(item.start)}
+                                                style={{
+                                                    padding: '12px',
+                                                    borderRadius: '8px',
+                                                    background: isSelected ? 'rgba(102, 126, 234, 0.4)' : item.type === 'task' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
+                                                    border: '1px solid',
+                                                    borderColor: isSelected ? '#667eea' : item.type === 'task' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.1)',
+                                                    cursor: item.type === 'task' ? 'default' : 'pointer',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    opacity: item.type === 'free' && !canFit ? 0.6 : 1
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                                                        {format(item.start, 'h:mm a')} - {format(item.end, 'h:mm a')}
+                                                    </span>
+                                                    {item.type === 'free' && (
+                                                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>{Math.floor(item.duration)} min available</span>
+                                                    )}
+                                                </div>
+
+                                                {item.type === 'task' ? (
+                                                    <span style={{ color: '#fca5a5', fontSize: '0.8rem', textAlign: 'right' }}>{item.title}</span>
+                                                ) : isSelected ? (
+                                                    <span style={{ color: '#667eea', fontSize: '0.8rem', fontWeight: 'bold' }}>Selected</span>
+                                                ) : canFit ? (
+                                                    <span style={{ color: 'rgba(102, 126, 234, 0.6)', fontSize: '0.75rem' }}>Plan here</span>
+                                                ) : (
+                                                    <span style={{ color: 'rgba(239, 68, 68, 0.6)', fontSize: '0.75rem' }}>Too short</span>
+                                                )}
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px' }}>
+                    {step === 'time' && (
+                        <button
+                            onClick={() => setStep('details')}
+                            className="btn secondary"
+                            style={{ flex: 1 }}
+                        >
+                            Back
+                        </button>
+                    )}
+
+                    {step === 'details' ? (
+                        <button
+                            onClick={() => title.trim() && setStep('time')}
+                            disabled={!title.trim()}
+                            className="btn primary"
+                            style={{ flex: 2 }}
+                        >
+                            Next
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleCreate}
+                            disabled={!startTime || loading}
+                            className="btn primary"
+                            style={{ flex: 2 }}
+                        >
+                            {loading ? 'Creating...' : 'Create Task'}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

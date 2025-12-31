@@ -80,228 +80,419 @@ export default function CreateTaskModal({ isOpen, onClose }: CreateTaskModalProp
 
 
     return (
-        <div style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 3000,
-            padding: '20px'
-        }}>
-            <div className="glass-clear" style={{
-                width: '100%', maxWidth: '500px', maxHeight: '90vh', overflow: 'hidden',
-                display: 'flex', flexDirection: 'column', position: 'relative'
-            }}>
-                <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ color: 'white', margin: 0, fontSize: '1.25rem' }}>
-                        {step === 'details' ? 'Task Details' : 'Select Time'}
-                    </h2>
-                    <button onClick={onClose} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer' }}>
-                        <X size={24} />
-                    </button>
-                </div>
+        <>
+            <style>{`
+                .create-task-modal-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.7);
+                    backdrop-filter: blur(12px);
+                    z-index: 3000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 16px;
+                    animation: fadeIn 0.2s ease-out;
+                }
 
-                <div style={{ padding: '20px', overflowY: 'auto', flex: 1 }}>
-                    <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 0, marginBottom: '20px', fontSize: '0.9rem' }}>
-                        Creating task for <strong>{format(selectedDate, 'MMMM d, yyyy')}</strong>
-                    </p>
+                .create-task-modal-content {
+                    width: 100%;
+                    max-width: 550px;
+                    max-height: 90vh;
+                    display: flex;
+                    flex-direction: column;
+                    overflow: hidden;
+                    background: rgba(15, 23, 42, 0.9);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                    border-radius: 20px;
+                    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                }
 
-                    {step === 'details' && (
-                        <div className="fade-in">
-                            <div className="form-group">
-                                <label className="form-label" style={{ color: 'white' }}>Task Title</label>
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    className="form-input"
-                                    placeholder="Enter task name"
-                                    value={title}
-                                    onChange={e => setTitle(e.target.value)}
-                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                                />
+                @media (min-width: 768px) {
+                    .create-task-modal-content {
+                        border-radius: 24px;
+                    }
+                }
+
+                .modal-header {
+                    padding: 20px 24px;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+
+                .modal-title {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    color: white;
+                    letter-spacing: -0.025em;
+                }
+
+                .modal-close-btn {
+                    background: transparent;
+                    border: none;
+                    color: rgba(255, 255, 255, 0.6);
+                    cursor: pointer;
+                    padding: 8px;
+                    border-radius: 8px;
+                    transition: all 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .modal-close-btn:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    color: white;
+                }
+
+                .modal-body {
+                    padding: 24px;
+                    overflow-y: auto;
+                    flex: 1;
+                }
+
+                .modal-footer {
+                    padding: 20px 24px;
+                    border-top: 1px solid rgba(255, 255, 255, 0.08);
+                    display: flex;
+                    gap: 12px;
+                    background: rgba(0, 0, 0, 0.2);
+                }
+
+                .planning-input {
+                    background: rgba(0, 0, 0, 0.2) !important;
+                    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+                    color: white !important;
+                    padding: 12px 16px !important;
+                    border-radius: 12px !important;
+                    font-size: 0.95rem !important;
+                    width: 100%;
+                    transition: all 0.2s;
+                    font-family: inherit;
+                }
+
+                .planning-input:focus {
+                    border-color: #667eea !important;
+                    background: rgba(0, 0, 0, 0.4) !important;
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2) !important;
+                    outline: none;
+                }
+
+                .planning-input::placeholder {
+                    color: rgba(255, 255, 255, 0.3);
+                }
+
+                .planning-textarea {
+                    min-height: 100px;
+                    resize: vertical;
+                    line-height: 1.5;
+                }
+
+                .form-group {
+                    margin-bottom: 20px;
+                }
+
+                .form-label {
+                    display: block;
+                    margin-bottom: 8px;
+                    color: rgba(255, 255, 255, 0.7);
+                    font-weight: 600;
+                    font-size: 0.85rem;
+                }
+
+                .btn-modal {
+                    padding: 12px 20px;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    font-size: 0.95rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    border: none;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+
+                .btn-modal-primary {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    box-shadow: 0 4px 12px rgba(118, 75, 162, 0.3);
+                }
+
+                .btn-modal-primary:hover:not(:disabled) {
+                    transform: translateY(-1px);
+                    box-shadow: 0 6px 16px rgba(118, 75, 162, 0.4);
+                }
+
+                .btn-modal-primary:disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                    transform: none;
+                }
+
+                .btn-modal-secondary {
+                    background: rgba(255, 255, 255, 0.1);
+                    color: white;
+                }
+
+                .btn-modal-secondary:hover {
+                    background: rgba(255, 255, 255, 0.15);
+                }
+
+                .time-slot {
+                    padding: 12px;
+                    border-radius: 12px;
+                    background: rgba(255, 255, 255, 0.03);
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    cursor: pointer;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    transition: all 0.2s;
+                }
+
+                .time-slot:hover {
+                    background: rgba(255, 255, 255, 0.06);
+                }
+
+                .time-slot.selected {
+                    background: rgba(102, 126, 234, 0.15);
+                    border-color: rgba(102, 126, 234, 0.5);
+                }
+
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateY(20px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+
+                /* Custom Scrollbar for the modal body */
+                .modal-body::-webkit-scrollbar {
+                    width: 6px;
+                }
+                .modal-body::-webkit-scrollbar-track {
+                    background: transparent;
+                }
+                .modal-body::-webkit-scrollbar-thumb {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 3px;
+                }
+                .modal-body::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                }
+            `}</style>
+
+            <div className="create-task-modal-overlay">
+                <div className="create-task-modal-content">
+                    <div className="modal-header">
+                        <h2 className="modal-title">
+                            {step === 'details' ? 'Task Details' : 'Select Time'}
+                        </h2>
+                        <button onClick={onClose} className="modal-close-btn">
+                            <X size={24} />
+                        </button>
+                    </div>
+
+                    <div className="modal-body">
+                        <p style={{ color: 'rgba(255,255,255,0.6)', marginTop: 0, marginBottom: '24px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            Creating task for <span style={{ color: '#fff', fontWeight: 600 }}>{format(selectedDate, 'MMMM d, yyyy')}</span>
+                        </p>
+
+                        {step === 'details' && (
+                            <div className="fade-in">
+                                <div className="form-group">
+                                    <label className="form-label">Task Title</label>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        className="planning-input"
+                                        placeholder="What needs to be done?"
+                                        value={title}
+                                        onChange={e => setTitle(e.target.value)}
+                                        onKeyDown={e => {
+                                            if (e.key === 'Enter' && title.trim()) setStep('time');
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Description (Optional)</label>
+                                    <textarea
+                                        className="planning-input planning-textarea"
+                                        placeholder="Add details, context, or subtasks..."
+                                        value={description}
+                                        onChange={e => setDescription(e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="form-group">
+                                    <label className="form-label">Priority</label>
+                                    <select
+                                        className="planning-input"
+                                        value={priority}
+                                        onChange={e => setPriority(e.target.value as Priority)}
+                                    >
+                                        <option value="High" style={{ color: 'black' }}>High Priority</option>
+                                        <option value="Medium" style={{ color: 'black' }}>Medium Priority</option>
+                                        <option value="Low" style={{ color: 'black' }}>Low Priority</option>
+                                    </select>
+                                </div>
                             </div>
+                        )}
 
-                            <div className="form-group">
-                                <label className="form-label" style={{ color: 'white' }}>Description</label>
-                                <textarea
-                                    className="form-input"
-                                    placeholder="Enter details..."
-                                    value={description}
-                                    onChange={e => setDescription(e.target.value)}
-                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', minHeight: '80px' }}
-                                />
-                            </div>
+                        {step === 'time' && (
+                            <div className="fade-in">
+                                <div className="form-group">
+                                    <label className="form-label">Duration (minutes)</label>
+                                    <input
+                                        type="number"
+                                        className="planning-input"
+                                        value={duration}
+                                        onChange={e => setDuration(parseInt(e.target.value) || 0)}
+                                    />
+                                </div>
 
-                            <div className="form-group">
-                                <label className="form-label" style={{ color: 'white' }}>Priority</label>
-                                <select
-                                    className="form-select"
-                                    value={priority}
-                                    onChange={e => setPriority(e.target.value as Priority)}
-                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                                >
-                                    <option value="High" style={{ color: 'black' }}>High</option>
-                                    <option value="Medium" style={{ color: 'black' }}>Medium</option>
-                                    <option value="Low" style={{ color: 'black' }}>Low</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
-
-                    {step === 'time' && (
-                        <div className="fade-in">
-                            <div className="form-group">
-                                <label className="form-label" style={{ color: 'white' }}>Duration (minutes)</label>
-                                <input
-                                    type="number"
-                                    className="form-input"
-                                    value={duration}
-                                    onChange={e => setDuration(parseInt(e.target.value) || 0)}
-                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
-                                />
-                            </div>
-
-                            <div className="form-group">
-                                <label className="form-label" style={{ color: 'white' }}>Manual Time Selection</label>
-                                <div style={{ display: 'flex', gap: '10px' }}>
+                                <div className="form-group">
+                                    <label className="form-label">Time Selection</label>
                                     <input
                                         type="time"
-                                        className="form-input"
+                                        className="planning-input"
                                         value={startTime ? format(startTime, 'HH:mm') : ''}
                                         onChange={e => {
                                             if (!e.target.value) return;
                                             const [h, m] = e.target.value.split(':').map(Number);
                                             setStartTime(setHours(setMinutes(startOfDay(selectedDate), m), h));
                                         }}
-                                        style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white' }}
                                     />
                                 </div>
-                            </div>
 
-                            <label className="form-label" style={{ color: 'white', marginTop: '10px' }}>Suggested Gaps & Schedule</label>
-                            <div style={{
-                                display: 'flex', flexDirection: 'column', gap: '8px',
-                                maxHeight: '300px', overflowY: 'auto', paddingRight: '10px'
-                            }}>
-                                {(() => {
-                                    const dayTasks = tasks
-                                        .filter(t => !t.completed && isSameDay(t.deadline, selectedDate))
-                                        .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+                                <label className="form-label" style={{ marginTop: '24px' }}>Suggested Time Slots</label>
+                                <div style={{
+                                    display: 'flex', flexDirection: 'column', gap: '8px',
+                                    maxHeight: '240px', overflowY: 'auto', paddingRight: '4px'
+                                }}>
+                                    {(() => {
+                                        const dayTasks = tasks
+                                            .filter(t => !t.completed && isSameDay(t.deadline, selectedDate))
+                                            .sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
 
-                                    const dayTimeline: any[] = [];
-                                    let lastTime = startOfDay(selectedDate);
+                                        const dayTimeline: any[] = [];
+                                        let lastTime = startOfDay(selectedDate);
 
-                                    dayTasks.forEach(task => {
-                                        const tStart = new Date(task.deadline);
-                                        const tEnd = task.endTime ? new Date(task.endTime) : addMinutes(tStart, 30);
+                                        dayTasks.forEach(task => {
+                                            const tStart = new Date(task.deadline);
+                                            const tEnd = task.endTime ? new Date(task.endTime) : addMinutes(tStart, 30);
 
-                                        if (tStart > lastTime) {
+                                            if (tStart > lastTime) {
+                                                dayTimeline.push({
+                                                    type: 'free',
+                                                    start: lastTime,
+                                                    end: tStart,
+                                                    duration: (tStart.getTime() - lastTime.getTime()) / (1000 * 60)
+                                                });
+                                            }
+
+                                            dayTimeline.push({
+                                                type: 'task',
+                                                title: task.title,
+                                                start: tStart,
+                                                end: tEnd
+                                            });
+
+                                            lastTime = tEnd;
+                                        });
+
+                                        const endOfDay = setHours(setMinutes(startOfDay(selectedDate), 59), 23);
+                                        if (lastTime < endOfDay) {
                                             dayTimeline.push({
                                                 type: 'free',
                                                 start: lastTime,
-                                                end: tStart,
-                                                duration: (tStart.getTime() - lastTime.getTime()) / (1000 * 60)
+                                                end: endOfDay,
+                                                duration: (endOfDay.getTime() - lastTime.getTime()) / (1000 * 60)
                                             });
                                         }
 
-                                        dayTimeline.push({
-                                            type: 'task',
-                                            title: task.title,
-                                            start: tStart,
-                                            end: tEnd
-                                        });
+                                        return dayTimeline.map((item, i) => {
+                                            const isSelected = item.type === 'free' && startTime && item.start.getTime() === startTime.getTime();
+                                            const canFit = item.type === 'free' && item.duration >= duration;
 
-                                        lastTime = tEnd;
-                                    });
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    onClick={() => item.type === 'free' && setStartTime(item.start)}
+                                                    className={`time-slot ${isSelected ? 'selected' : ''}`}
+                                                    style={{
+                                                        opacity: item.type === 'free' && !canFit ? 0.5 : 1,
+                                                        pointerEvents: item.type === 'task' ? 'none' : 'auto',
+                                                        borderColor: item.type === 'task' ? 'rgba(239, 68, 68, 0.2)' : undefined,
+                                                        background: item.type === 'task' ? 'rgba(239, 68, 68, 0.05)' : undefined
+                                                    }}
+                                                >
+                                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                        <span style={{ color: 'white', fontWeight: '600', fontSize: '0.9rem' }}>
+                                                            {format(item.start, 'h:mm a')} - {format(item.end, 'h:mm a')}
+                                                        </span>
+                                                        {item.type === 'free' && (
+                                                            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>{Math.floor(item.duration)} min available</span>
+                                                        )}
+                                                    </div>
 
-                                    const endOfDay = setHours(setMinutes(startOfDay(selectedDate), 59), 23);
-                                    if (lastTime < endOfDay) {
-                                        dayTimeline.push({
-                                            type: 'free',
-                                            start: lastTime,
-                                            end: endOfDay,
-                                            duration: (endOfDay.getTime() - lastTime.getTime()) / (1000 * 60)
-                                        });
-                                    }
-
-                                    return dayTimeline.map((item, i) => {
-                                        const isSelected = item.type === 'free' && startTime && item.start.getTime() === startTime.getTime();
-                                        const canFit = item.type === 'free' && item.duration >= duration;
-
-                                        return (
-                                            <div
-                                                key={i}
-                                                onClick={() => item.type === 'free' && setStartTime(item.start)}
-                                                style={{
-                                                    padding: '12px',
-                                                    borderRadius: '8px',
-                                                    background: isSelected ? 'rgba(102, 126, 234, 0.4)' : item.type === 'task' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(255,255,255,0.05)',
-                                                    border: '1px solid',
-                                                    borderColor: isSelected ? '#667eea' : item.type === 'task' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.1)',
-                                                    cursor: item.type === 'task' ? 'default' : 'pointer',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    opacity: item.type === 'free' && !canFit ? 0.6 : 1
-                                                }}
-                                            >
-                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                    <span style={{ color: 'white', fontWeight: 'bold', fontSize: '0.9rem' }}>
-                                                        {format(item.start, 'h:mm a')} - {format(item.end, 'h:mm a')}
-                                                    </span>
-                                                    {item.type === 'free' && (
-                                                        <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.75rem' }}>{Math.floor(item.duration)} min available</span>
+                                                    {item.type === 'task' ? (
+                                                        <span style={{ color: '#fca5a5', fontSize: '0.8rem' }}>{item.title}</span>
+                                                    ) : isSelected ? (
+                                                        <span style={{ color: '#667eea', fontSize: '0.8rem', fontWeight: 'bold' }}>Selected</span>
+                                                    ) : canFit ? (
+                                                        <span style={{ color: 'rgba(102, 126, 234, 0.6)', fontSize: '0.75rem' }}>Select</span>
+                                                    ) : (
+                                                        <span style={{ color: 'rgba(255, 255, 255, 0.2)', fontSize: '0.75rem' }}>Too short</span>
                                                     )}
                                                 </div>
-
-                                                {item.type === 'task' ? (
-                                                    <span style={{ color: '#fca5a5', fontSize: '0.8rem', textAlign: 'right' }}>{item.title}</span>
-                                                ) : isSelected ? (
-                                                    <span style={{ color: '#667eea', fontSize: '0.8rem', fontWeight: 'bold' }}>Selected</span>
-                                                ) : canFit ? (
-                                                    <span style={{ color: 'rgba(102, 126, 234, 0.6)', fontSize: '0.75rem' }}>Plan here</span>
-                                                ) : (
-                                                    <span style={{ color: 'rgba(239, 68, 68, 0.6)', fontSize: '0.75rem' }}>Too short</span>
-                                                )}
-                                            </div>
-                                        );
-                                    });
-                                })()}
+                                            );
+                                        });
+                                    })()}
+                                </div>
                             </div>
-                        </div>
-                    )}
-                </div>
+                        )}
+                    </div>
 
-                <div style={{ padding: '20px', borderTop: '1px solid rgba(255,255,255,0.1)', display: 'flex', gap: '10px' }}>
-                    {step === 'time' && (
-                        <button
-                            onClick={() => setStep('details')}
-                            className="btn secondary"
-                            style={{ flex: 1 }}
-                        >
-                            Back
-                        </button>
-                    )}
+                    <div className="modal-footer">
+                        {step === 'time' && (
+                            <button
+                                onClick={() => setStep('details')}
+                                className="btn-modal btn-modal-secondary"
+                                style={{ flex: 1 }}
+                            >
+                                Back
+                            </button>
+                        )}
 
-                    {step === 'details' ? (
-                        <button
-                            onClick={() => title.trim() && setStep('time')}
-                            disabled={!title.trim()}
-                            className="btn primary"
-                            style={{ flex: 2 }}
-                        >
-                            Next
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleCreate}
-                            disabled={!startTime || loading}
-                            className="btn primary"
-                            style={{ flex: 2 }}
-                        >
-                            {loading ? 'Creating...' : 'Create Task'}
-                        </button>
-                    )}
+                        {step === 'details' ? (
+                            <button
+                                onClick={() => title.trim() && setStep('time')}
+                                disabled={!title.trim()}
+                                className="btn-modal btn-modal-primary"
+                                style={{ flex: 2 }}
+                            >
+                                Next Step
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleCreate}
+                                disabled={!startTime || loading}
+                                className="btn-modal btn-modal-primary"
+                                style={{ flex: 2 }}
+                            >
+                                {loading ? 'Planning...' : 'Confirm Task'}
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }

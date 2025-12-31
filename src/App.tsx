@@ -3,7 +3,6 @@ import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
-import CreateTaskModal from './components/CreateTaskModal';
 import { useState } from 'react';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
@@ -19,13 +18,20 @@ import FeaturesPage from './pages/FeaturesPage';
 import SolutionsPage from './pages/SolutionsPage';
 import PricingPage from './pages/PricingPage';
 import AboutPage from './pages/AboutPage';
+import TemplatesPage from './pages/TemplatesPage';
 import './index.css';
 
 import ReminderOrchestrator from './components/ReminderOrchestrator';
 
+import { useNavigate } from 'react-router-dom';
+
 function DashboardLayout() {
-  const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleCreateTask = () => {
+    navigate('/dashboard/calendar', { state: { scrollToCalendar: true } });
+  };
 
   return (
     <div className="app-container">
@@ -33,11 +39,10 @@ function DashboardLayout() {
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       <div className="main-content">
         <Header
-          onCreateTask={() => setIsCreateTaskOpen(true)}
+          onCreateTask={handleCreateTask}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
         />
-        <Outlet context={{ onCreateTask: () => setIsCreateTaskOpen(true) }} />
-        <CreateTaskModal isOpen={isCreateTaskOpen} onClose={() => setIsCreateTaskOpen(false)} />
+        <Outlet context={{ onCreateTask: handleCreateTask }} />
       </div>
     </div>
   );
@@ -67,6 +72,7 @@ function App() {
             <Route path="routines" element={<RoutinesPage />} />
             <Route path="reminders" element={<RemindersPage />} />
             <Route path="calendar" element={<CalendarPage />} />
+            <Route path="templates" element={<TemplatesPage />} />
             <Route path="reports" element={<ReportsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>

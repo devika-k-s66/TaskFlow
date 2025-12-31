@@ -1,0 +1,21 @@
+﻿
+D:\Talim\Taskflow\src\pages\CalendarPage.tsx
+   928:4    error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   937:66   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   938:54   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   946:66   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   968:72   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   969:45   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   989:50   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   997:39   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1282:60   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1355:53   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1381:48   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1381:56   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1383:56   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1386:69   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1812:66   error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  1899:122  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 16 problems (16 errors, 0 warnings)
+

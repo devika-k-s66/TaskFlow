@@ -94,6 +94,22 @@ export interface DashboardStats {
   overdueItems: number;
 }
 
+// Template Interface
+export interface TimeSlot {
+  id: string;
+  title: string;
+  startTime: string; // "HH:mm"
+  duration: number; // minutes
+  priority: Priority;
+}
+
+export interface TimeTemplate {
+  id: string;
+  name: string;
+  slots: TimeSlot[];
+  createdAt: Date;
+}
+
 // Analytics Interface
 export interface Analytics {
   completionRate: number[];

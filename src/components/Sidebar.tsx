@@ -10,7 +10,8 @@ import {
     Settings,
     HelpCircle,
     LogOut,
-    X
+    X,
+    Library
 } from 'lucide-react';
 
 const navItems = [
@@ -18,6 +19,7 @@ const navItems = [
     { path: '/dashboard/tasks', label: 'Tasks', icon: CheckSquare },
     { path: '/dashboard/automations', label: 'Automations', icon: Zap },
     { path: '/dashboard/routines', label: 'Smart Routines', icon: Repeat },
+    { path: '/dashboard/templates', label: 'Time Templates', icon: Library },
     { path: '/dashboard/reminders', label: 'Reminders', icon: Bell },
     { path: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
     { path: '/dashboard/reports', label: 'Reports', icon: BarChart3 },

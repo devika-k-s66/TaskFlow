@@ -4,18 +4,23 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
+    onCreateTask?: () => void;
     onCreateAutomation?: () => void;
     toggleSidebar?: () => void;
 }
 
-export default function Header({ onCreateAutomation, toggleSidebar }: HeaderProps) {
+export default function Header({ onCreateTask, onCreateAutomation, toggleSidebar }: HeaderProps) {
     const { user, logout } = useAuth();
     const [showUserMenu, setShowUserMenu] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const navigate = useNavigate();
 
     const handleCreateTaskClick = () => {
-        navigate('/dashboard/calendar');
+        if (onCreateTask) {
+            onCreateTask();
+        } else {
+            navigate('/dashboard/calendar');
+        }
     };
 
     useEffect(() => {

@@ -1,5 +1,5 @@
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckSquare, Bell, Clock, LayoutGrid, List, TrendingUp, Activity, Zap } from 'lucide-react';
-import { useTasks, useReminders } from '../hooks/useFirestore';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckSquare, Bell, Clock, LayoutGrid, List, TrendingUp, Activity, Zap, Save, Library, Eye, X, Trash2, Edit2 } from 'lucide-react';
+import { useTasks, useReminders, useTemplates } from '../hooks/useFirestore';
 import {
     format,
     isSameDay,
@@ -19,13 +19,14 @@ import {
     setMinutes,
     addMinutes as addMinutesFn
 } from 'date-fns';
-import { useState, useEffect } from 'react';
-import type { Priority } from '../types';
+import { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
+import type { Priority, Task, TimeTemplate, TimeSlot } from '../types';
 
 type ViewMode = 'month' | 'week';
 
 export default function CalendarPage() {
-    const { tasks, loading: loadingTasks } = useTasks();
+    const { tasks, loading: loadingTasks, addTask, updateTask, deleteTask } = useTasks();
     const { reminders, loading: loadingReminders } = useReminders();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState<ViewMode>('month');
@@ -33,7 +34,7 @@ export default function CalendarPage() {
     const [isTablet, setIsTablet] = useState(window.innerWidth >= 768 && window.innerWidth < 1024);
 
     const [selectedDateForCreation, setSelectedDateForCreation] = useState<Date | null>(null);
-    const { addTask } = useTasks();
+
 
     // Creation States
     const [taskTitle, setTaskTitle] = useState('');
@@ -41,39 +42,27 @@ export default function CalendarPage() {
     const [taskPriority, setTaskPriority] = useState<Priority>('Medium');
     const [taskDuration, setTaskDuration] = useState(60);
     const [taskStartTime, setTaskStartTime] = useState<Date | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
+
+    const location = useLocation();
+    const calendarRef = useRef<HTMLDivElement>(null);
+
+    const [showDateSelectionPrompt, setShowDateSelectionPrompt] = useState(false);
+
+    useEffect(() => {
+        if (location.state?.scrollToCalendar && calendarRef.current) {
+            calendarRef.current.scrollIntoView({ behavior: 'smooth' });
+            setShowDateSelectionPrompt(true);
+            // Clear state
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
 
     const handleDateClick = (dayNum: number) => {
         const selected = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
         setSelectedDateForCreation(selected);
+        setShowDateSelectionPrompt(false);
     };
 
-    const handleSaveTask = async () => {
-        if (!taskTitle.trim() || !taskStartTime || !selectedDateForCreation) return;
-        setIsSaving(true);
-        try {
-            await addTask({
-                title: taskTitle,
-                description: taskDesc,
-                priority: taskPriority,
-                deadline: taskStartTime,
-                endTime: addMinutesFn(taskStartTime, taskDuration),
-                completed: false,
-                repeat: 'None',
-                tags: []
-            });
-            setSelectedDateForCreation(null);
-            setTaskTitle('');
-            setTaskDesc('');
-            setTaskStartTime(null);
-            setTaskPriority('Medium');
-            setTaskDuration(60);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsSaving(false);
-        }
-    };
 
     useEffect(() => {
         const handleResize = () => {
@@ -419,7 +408,7 @@ export default function CalendarPage() {
 
 
             {/* Calendar Controls */}
-            <div className="glass-clear" style={{ padding: isMobile ? '16px' : '24px 32px', marginBottom: isMobile ? '16px' : '24px' }}>
+            <div ref={calendarRef} id="calendar-view" className="glass-clear" style={{ padding: isMobile ? '16px' : '24px 32px', marginBottom: isMobile ? '16px' : '24px' }}>
                 <div style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -466,6 +455,25 @@ export default function CalendarPage() {
                             Today
                         </button>
                     </div>
+
+                    {showDateSelectionPrompt && (
+                        <div style={{
+                            background: 'rgba(56, 189, 248, 0.15)',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            color: '#38bdf8',
+                            padding: '8px 16px',
+                            borderRadius: '12px',
+                            fontSize: '0.9rem',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            animation: 'pulse 2s infinite'
+                        }}>
+                            <Zap size={16} />
+                            Please select a date on the calendar to start planning
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', width: isMobile ? '100%' : 'auto' }}>
                         {/* View Mode Toggle */}
@@ -923,172 +931,768 @@ export default function CalendarPage() {
                 <PlanningPageView
                     selectedDate={selectedDateForCreation}
                     onClose={() => setSelectedDateForCreation(null)}
-                    onSave={handleSaveTask}
                     title={taskTitle} setTitle={setTaskTitle}
                     desc={taskDesc} setDesc={setTaskDesc}
                     priority={taskPriority} setPriority={setTaskPriority}
                     duration={taskDuration} setDuration={setTaskDuration}
                     startTime={taskStartTime} setStartTime={setTaskStartTime}
-                    isSaving={isSaving}
                     isMobile={isMobile}
                     getEventsForDay={getEventsForDay}
+                    addTask={addTask}
+                    updateTask={updateTask}
+                    deleteTask={deleteTask}
                 />
             )}
         </div>
     );
 }
 
-// Sub-component for Planning View for better organization
 function PlanningPageView({
     selectedDate,
     onClose,
-    onSave,
     title, setTitle,
     desc, setDesc,
     priority, setPriority,
     duration, setDuration,
     startTime, setStartTime,
-    isSaving,
     isMobile,
-    getEventsForDay
-}: any) {
+    getEventsForDay,
+    addTask,
+    updateTask,
+    deleteTask
+}: {
+    selectedDate: Date;
+    onClose: () => void;
+    title: string;
+    setTitle: (v: string) => void;
+    desc: string;
+    setDesc: (v: string) => void;
+    priority: Priority;
+    setPriority: (v: Priority) => void;
+    duration: number;
+    setDuration: (v: number) => void;
+    startTime: Date | null;
+    setStartTime: (v: Date | null) => void;
+    isMobile: boolean;
+    getEventsForDay: (day: number | Date) => { id: string; title: string; type: 'task' | 'reminder'; priority?: Priority; start?: Date; end?: Date; }[];
+    addTask: (t: Omit<Task, 'id' | 'createdAt'>) => Promise<void>;
+    updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+    deleteTask: (id: string) => Promise<void>;
+}) {
+    const { templates, addTemplate, updateTemplate } = useTemplates();
+    const [templateName, setTemplateName] = useState('');
+    const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+
+    // Mobile accordion state
+    const [isTemplatesExpanded, setIsTemplatesExpanded] = useState(false);
+    const [isScheduleExpanded, setIsScheduleExpanded] = useState(true); // Open by default
+    const [isSaveTemplateExpanded, setIsSaveTemplateExpanded] = useState(false);
+    const [previewingTemplate, setPreviewingTemplate] = useState<TimeTemplate | null>(null);
+    const [sessionTasks, setSessionTasks] = useState<any[]>([]);
+    const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+    const [finalizeLoading, setFinalizeLoading] = useState(false);
+
+    const isOverlapping = (start: Date, duration_min: number, ignoreId?: string) => {
+        const end = addMinutesFn(start, duration_min);
+
+        // Check existing DB tasks
+        const dbTasks = getEventsForDay(selectedDate).filter((e): e is { id: string; title: string; type: 'task'; priority: Priority; start: Date; end: Date; } => e.type === 'task');
+        for (const t of dbTasks) {
+            if (ignoreId === `db_${t.id}`) continue;
+            const s = new Date(t.start);
+            const e = t.end ? new Date(t.end) : addMinutesFn(s, 30);
+            if (start < e && end > s) return true;
+        }
+
+        // Check session tasks
+        for (const st of sessionTasks) {
+            if (ignoreId && st.id === ignoreId) continue;
+            const stEnd = addMinutesFn(st.start, st.duration);
+            if (start < stEnd && end > st.start) return true;
+        }
+
+        return false;
+    };
+
+    const handleSaveAsTemplate = async () => {
+        if (!templateName.trim()) return;
+        setIsSavingTemplate(true);
+        try {
+            const dayEvents = getEventsForDay(selectedDate).filter((e: { type: string }) => e.type === 'task');
+            const slots = dayEvents.map((e: any) => ({
+                id: Math.random().toString(36).substr(2, 9),
+                title: e.title,
+                startTime: format(e.start, 'HH:mm'),
+                duration: e.end ? (new Date(e.end).getTime() - new Date(e.start).getTime()) / (1000 * 60) : 30,
+                priority: (e.priority as Priority) || 'Medium'
+            }));
+
+            await addTemplate({
+                name: templateName,
+                slots
+            });
+            setTemplateName('');
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsSavingTemplate(false);
+        }
+    };
+
+    const handleApplyTemplate = async (template: TimeTemplate) => {
+        let addedCount = 0;
+        let overlapCount = 0;
+        const newTasks = [...sessionTasks];
+
+        template.slots.forEach((slot: TimeSlot) => {
+            const [h, m] = slot.startTime.split(':').map(Number);
+            const start = setHours(setMinutes(startOfDay(selectedDate), m), h);
+
+            if (isOverlapping(start, slot.duration)) {
+                overlapCount++;
+            } else {
+                newTasks.push({
+                    id: 'session_' + Math.random().toString(36).slice(2, 11),
+                    title: slot.title,
+                    description: 'From template: ' + template.name,
+                    priority: slot.priority,
+                    start,
+                    duration: slot.duration,
+                    source: 'template'
+                });
+                addedCount++;
+            }
+        });
+
+        setSessionTasks(newTasks);
+        if (overlapCount > 0) {
+            alert(`${addedCount} tasks added. ${overlapCount} tasks skipped due to time overlap.`);
+        }
+    };
+
+    const handleAddToPlan = async () => {
+        if (!title.trim() || !startTime) return;
+
+        if (isOverlapping(startTime, duration, editingTaskId || undefined)) {
+            alert('This time slot overlaps with an existing task. Please adjust the time or duration.');
+            return;
+        }
+
+        if (editingTaskId) {
+            if (editingTaskId.toString().startsWith('db_')) {
+                const dbId = editingTaskId.toString().replace('db_', '');
+                await updateTask(dbId, {
+                    title,
+                    description: desc,
+                    priority,
+                    deadline: startTime,
+                    endTime: addMinutesFn(startTime, duration)
+                });
+                alert('Task updated in database.');
+            } else {
+                setSessionTasks(sessionTasks.map(t => t.id === editingTaskId ? {
+                    ...t, title, description: desc, priority, start: startTime, duration
+                } : t));
+            }
+            setEditingTaskId(null);
+        } else {
+            setSessionTasks([...sessionTasks, {
+                id: 'session_' + Date.now(),
+                title, description: desc, priority, start: startTime, duration,
+                source: 'manual'
+            }]);
+        }
+
+        // Reset form
+        setTitle('');
+        setDesc('');
+        setPriority('Medium');
+        setDuration(60);
+        setStartTime(null);
+    };
+
+    const handleFinalizeSchedule = async () => {
+        if (sessionTasks.length === 0) return;
+
+        setFinalizeLoading(true);
+        try {
+            for (const t of sessionTasks) {
+                await addTask({
+                    title: t.title,
+                    description: t.description || '',
+                    priority: t.priority,
+                    deadline: t.start,
+                    endTime: addMinutesFn(t.start, t.duration),
+                    completed: false,
+                    repeat: 'None',
+                    tags: t.source === 'template' ? ['template'] : []
+                });
+            }
+            alert(`Schedule finalized! ${sessionTasks.length} tasks added.`);
+            onClose();
+        } catch (e) {
+            console.error(e);
+            alert('Error saving some tasks. Please try again.');
+        } finally {
+            setFinalizeLoading(false);
+        }
+    };
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: '#09090b', zIndex: 4000, overflowY: 'auto',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            zIndex: 4000,
+            overflowY: 'auto',
             animation: 'fadeIn 0.3s ease-out',
             color: 'white',
-            fontFamily: "'Inter', sans-serif"
+            fontFamily: "'Inter', sans-serif",
+            backgroundAttachment: 'fixed'
         }}>
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
                 @keyframes pulseGlow { 0% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.2); } 50% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.4); } 100% { box-shadow: 0 0 5px rgba(102, 126, 234, 0.2); } }
-                .planning-input:focus { border-color: #667eea !important; box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15); outline: none; background: rgba(255,255,255,0.06) !important; }
+                
+                .planning-input { transition: all 0.3s ease; }
+                .planning-input:hover { border-color: rgba(255,255,255,0.5) !important; background: rgba(255,255,255,0.25) !important; }
+                .planning-input:focus { border-color: #fff !important; box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2); outline: none; background: rgba(255,255,255,0.3) !important; }
+                .planning-input::placeholder { color: rgba(255,255,255,0.5) !important; }
+                
                 .glass-card { 
-                    background: rgba(255,255,255,0.03); 
-                    border: 1px solid rgba(255,255,255,0.08); 
-                    border-radius: 20px; 
-                    padding: 24px; 
+                    background: rgba(15, 23, 42, 0.4); 
+                    border: 1px solid rgba(255,255,255,0.15); 
+                    border-radius: 16px; 
+                    padding: 20px; 
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    backdrop-filter: blur(12px);
+                    backdrop-filter: blur(20px);
                 }
                 .glass-card:hover { 
-                    background: rgba(255,255,255,0.05); 
-                    border-color: rgba(255,255,255,0.15);
+                    background: rgba(15, 23, 42, 0.5); 
+                    border-color: rgba(255,255,255,0.3);
                     transform: translateY(-2px);
-                    box-shadow: 0 12px 30px rgba(0,0,0,0.4);
+                    box-shadow: 0 12px 30px rgba(0,0,0,0.3);
                 }
-                .timeline-item {
-                    transition: all 0.2s ease;
+
+                .template-item {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    padding: 10px 12px;
+                    background: rgba(255,255,255,0.08);
+                    border-radius: 10px;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    border: 1px solid rgba(255,255,255,0.1);
                 }
-                .timeline-item:hover { 
-                    background: rgba(255,255,255,0.08) !important; 
-                    border-color: rgba(102, 126, 234, 0.4) !important;
+                .template-item:hover {
+                    background: rgba(255,255,255,0.15);
+                    border-color: rgba(255,255,255,0.3);
                     transform: translateX(4px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                 }
+
+                .timeline-item { transition: all 0.2s ease; }
+                .timeline-item:hover { 
+                    background: rgba(255,255,255,0.12) !important; 
+                    border-color: rgba(255, 255, 255, 0.3) !important;
+                    transform: translateX(4px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                }
+                
                 .primary-btn {
                     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                     position: relative;
                     overflow: hidden;
                 }
                 .primary-btn:hover:not(:disabled) {
-                    transform: translateY(-3px) scale(1.02);
-                    box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
-                    filter: brightness(1.1);
+                    transform: translateY(-2px);
+                    box-shadow: 0 15px 40px rgba(255, 255, 255, 0.3);
+                    filter: brightness(1.2);
                 }
-                .primary-btn:active:not(:disabled) {
-                    transform: translateY(-1px) scale(0.98);
-                }
-                .exit-btn {
-                    transition: all 0.2s ease;
-                }
+                .primary-btn:active:not(:disabled) { transform: translateY(0px) scale(0.98); }
+                
+                .exit-btn { transition: all 0.2s ease; }
                 .exit-btn:hover {
-                    background: rgba(239, 68, 68, 0.1) !important;
-                    border-color: rgba(239, 68, 68, 0.3) !important;
-                    color: #fca5a5 !important;
+                    background: rgba(255, 255, 255, 0.15) !important;
+                    border-color: rgba(255, 255, 255, 0.4) !important;
+                    color: white !important;
                     transform: scale(1.05);
+                    box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
                 }
-                ::-webkit-scrollbar { width: 6px; }
-                ::-webkit-scrollbar-track { background: transparent; }
-                ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
-                ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+                ::-webkit-scrollbar { width: 8px; }
+                ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); border-radius: 4px; }
+                ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+                ::-webkit-scrollbar-thumb:hover { background-color: rgba(255,255,255,0.3); }
+
+                /* Mobile Responsive Styles */
+                @media (max-width: 768px) {
+                    .glass-card {
+                        padding: 16px;
+                        border-radius: 16px;
+                    }
+                    .template-item {
+                        padding: 10px 12px;
+                        border-radius: 10px;
+                    }
+                    .timeline-item {
+                        padding: 12px 14px !important;
+                        border-radius: 12px !important;
+                    }
+                    .planning-input {
+                        font-size: 0.95rem !important;
+                        padding: 12px 14px !important;
+                    }
+                }
+
+                @media (max-width: 480px) {
+                    .glass-card {
+                        padding: 12px;
+                        border-radius: 12px;
+                    }
+                    .template-item {
+                        padding: 8px 10px;
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 8px;
+                    }
+                    .timeline-item {
+                        padding: 10px 12px !important;
+                        flex-direction: column;
+                        align-items: flex-start !important;
+                        gap: 8px;
+                    }
+                    .planning-input {
+                        font-size: 0.9rem !important;
+                        padding: 10px 12px !important;
+                    }
+                }
             `}</style>
 
-            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '20px' : '60px 40px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '40px' }}>
+            <div style={{ maxWidth: '1200px', margin: '0 auto', padding: isMobile ? '12px' : '40px 30px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: isMobile ? '16px' : '24px', flexWrap: 'wrap', gap: isMobile ? '12px' : '16px' }}>
                     <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#667eea', fontWeight: '600', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '2px', marginBottom: '12px' }}>
-                            <Zap size={16} />
-                            Task Planning
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'white', fontWeight: '700', textTransform: 'uppercase', fontSize: isMobile ? '0.7rem' : '0.85rem', letterSpacing: isMobile ? '1px' : '2px', marginBottom: isMobile ? '8px' : '12px', opacity: 0.9 }}>
+                            <Zap size={isMobile ? 14 : 18} />
+                            TASK PLANNING
                         </div>
-                        <h1 style={{ fontSize: isMobile ? '2rem' : '3.5rem', fontWeight: '800', margin: 0, letterSpacing: '-1.5px' }}>
-                            {format(selectedDate, 'EEEE, MMM do')}
+                        <h1 style={{ fontSize: isMobile ? '1.35rem' : '2.2rem', fontWeight: '800', margin: 0, letterSpacing: '-1.5px', color: 'white', textShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                            {format(selectedDate, isMobile ? 'MMM do' : 'EEEE, MMM do')}
                         </h1>
                     </div>
-                    <button
-                        onClick={onClose}
-                        className="exit-btn"
-                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '12px 24px', borderRadius: '12px', cursor: 'pointer', fontWeight: '600' }}
-                    >
-                        Exit Planner
-                    </button>
+                    <div style={{ display: 'flex', gap: '12px', width: isMobile ? '100%' : 'auto' }}>
+                        <button
+                            onClick={onClose}
+                            className="exit-btn"
+                            style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: isMobile ? '12px 20px' : '14px 28px', borderRadius: isMobile ? '12px' : '14px', cursor: 'pointer', fontWeight: '700', fontSize: isMobile ? '0.85rem' : '0.95rem', flex: isMobile ? 1 : 'initial' }}
+                        >
+                            {isMobile ? 'Exit' : 'Exit Planner'}
+                        </button>
+                    </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 0.8fr', gap: '32px' }}>
-                    {/* Form Section */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                        <div className="glass-card">
-                            <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Task Title</label>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '0.8fr 1.2fr', gap: isMobile ? '16px' : '24px' }}>
+                    {/* Left Column (Top on Mobile): Templates & Timeline */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
+
+                        {/* Quick Templates Section */}
+                        <div className="glass-card" style={{ padding: isMobile ? '16px' : '20px' }}>
+                            <div
+                                onClick={() => isMobile && setIsTemplatesExpanded(!isTemplatesExpanded)}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginBottom: (isMobile && !isTemplatesExpanded) ? '0' : (isMobile ? '12px' : '16px'),
+                                    cursor: isMobile ? 'pointer' : 'default',
+                                    userSelect: 'none'
+                                }}
+                            >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '10px' }}>
+                                    <Library size={isMobile ? 14 : 18} color="#fbbf24" />
+                                    <h4 style={{ margin: 0, fontSize: isMobile ? '0.85rem' : '0.95rem', fontWeight: '800', color: 'white' }}>Quick Templates</h4>
+                                </div>
+                                {isMobile ? (
+                                    <div style={{ fontSize: '1.2rem', color: 'white', transform: isTemplatesExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
+                                        ▼
+                                    </div>
+                                ) : (
+                                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>Apply instantly</span>
+                                )}
+                            </div>
+
+                            {(!isMobile || isTemplatesExpanded) && (
+                                templates.length === 0 ? (
+                                    <div style={{ textAlign: 'center', padding: isMobile ? '16px' : '24px', border: isMobile ? '1px dashed rgba(255,255,255,0.2)' : '2px dashed rgba(255,255,255,0.2)', borderRadius: isMobile ? '10px' : '12px', background: 'rgba(255,255,255,0.05)' }}>
+                                        <p style={{ margin: 0, fontSize: isMobile ? '0.75rem' : '0.85rem', color: 'rgba(255,255,255,0.7)', fontWeight: '500' }}>No templates found.</p>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '10px', maxHeight: isMobile ? '150px' : '200px', overflowY: 'auto', paddingRight: '4px' }}>
+                                        {templates.map((t: TimeTemplate) => (
+                                            <div key={t.id} className="template-item">
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontWeight: '800', fontSize: isMobile ? '0.8rem' : '0.9rem', color: 'white' }}>{t.name}</div>
+                                                    <div style={{ fontSize: isMobile ? '0.6rem' : '0.7rem', color: 'rgba(255,255,255,0.6)', fontWeight: '600' }}>{t.slots.length} tasks</div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: isMobile ? '4px' : '6px', alignItems: 'center' }}>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setPreviewingTemplate(t); }}
+                                                        style={{
+                                                            background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white',
+                                                            padding: isMobile ? '6px 10px' : '8px 14px', borderRadius: isMobile ? '6px' : '8px', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: '700', cursor: 'pointer',
+                                                            transition: 'all 0.2s', flexShrink: 0,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                                                            height: isMobile ? '28px' : '32px'
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+                                                    >
+                                                        <Eye size={isMobile ? 14 : 16} />
+                                                        View
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleApplyTemplate(t); }}
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #ffffff, #f0f0f0)', border: 'none', color: '#667eea',
+                                                            padding: isMobile ? '6px 12px' : '8px 14px', borderRadius: isMobile ? '6px' : '8px', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: '800', cursor: 'pointer',
+                                                            boxShadow: '0 4px 12px rgba(255, 255, 255, 0.3)', transition: 'all 0.2s', flexShrink: 0,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            height: isMobile ? '28px' : '32px'
+                                                        }}
+                                                        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.08)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(255, 255, 255, 0.4)'; }}
+                                                        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 255, 255, 0.3)'; }}
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            )}
+                        </div>
+
+                        <div
+                            onClick={() => isMobile && setIsScheduleExpanded(!isScheduleExpanded)}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                marginTop: isMobile ? '8px' : '10px',
+                                cursor: isMobile ? 'pointer' : 'default',
+                                userSelect: 'none',
+                                padding: isMobile ? '12px 16px' : '0',
+                                background: isMobile ? 'rgba(255,255,255,0.08)' : 'transparent',
+                                borderRadius: isMobile ? '12px' : '0',
+                                border: isMobile ? '1px solid rgba(255,255,255,0.15)' : 'none'
+                            }}
+                        >
+                            <h3 style={{ margin: 0, fontSize: isMobile ? '0.85rem' : '0.95rem', fontWeight: '800', color: 'white' }}>Slots</h3>
+                            {isMobile ? (
+                                <div style={{ fontSize: '1.2rem', color: 'white', transform: isScheduleExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
+                                    ▼
+                                </div>
+                            ) : (
+                                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>Click to select</span>
+                            )}
+                        </div>
+
+                        {(!isMobile || isScheduleExpanded) && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '8px' : '10px', maxHeight: isMobile ? '400px' : '500px', overflowY: 'auto', paddingRight: isMobile ? '4px' : '8px', marginTop: isMobile ? '12px' : '0' }}>
+                                {(() => {
+                                    const dbTasks = getEventsForDay(selectedDate)
+                                        .filter((e): e is { id: string; title: string; type: 'task'; priority: Priority; start: Date; end: Date; } => e.type === 'task')
+                                        .map(t => {
+                                            const s = new Date(t.start!);
+                                            const e = t.end ? new Date(t.end) : addMinutesFn(s, 30);
+                                            return {
+                                                ...t,
+                                                source: 'db',
+                                                start: s,
+                                                end: e,
+                                                duration: (e.getTime() - s.getTime()) / (1000 * 60),
+                                                id: 'db_' + t.id
+                                            };
+                                        });
+
+                                    const allPlannedTasks = [
+                                        ...dbTasks,
+                                        ...sessionTasks.map(t => ({
+                                            title: t.title,
+                                            start: t.start,
+                                            end: addMinutesFn(t.start, t.duration),
+                                            source: 'session',
+                                            id: t.id,
+                                            priority: t.priority,
+                                            description: t.description,
+                                            duration: t.duration
+                                        }))
+                                    ].sort((a: any, b: any) => (a.start as Date).getTime() - (b.start as Date).getTime());
+
+                                    const dayTimeline: any[] = [];
+                                    let lastTime = startOfDay(selectedDate);
+
+                                    allPlannedTasks.forEach((event: any) => {
+                                        if (event.start > lastTime) {
+                                            dayTimeline.push({
+                                                type: 'free',
+                                                start: lastTime,
+                                                end: event.start,
+                                                duration: ((event.start as Date).getTime() - lastTime.getTime()) / (1000 * 60)
+                                            });
+                                        }
+
+                                        dayTimeline.push({
+                                            type: 'task',
+                                            ...event
+                                        });
+
+                                        lastTime = event.end;
+                                    });
+
+                                    const eod = setHours(setMinutes(startOfDay(selectedDate), 59), 23);
+                                    if (lastTime < eod) {
+                                        dayTimeline.push({
+                                            type: 'free',
+                                            start: lastTime,
+                                            end: eod,
+                                            duration: (eod.getTime() - lastTime.getTime()) / (1000 * 60)
+                                        });
+                                    }
+
+                                    return dayTimeline.map((item, i) => {
+                                        const isSelected = item.type === 'free' && startTime && item.start.getTime() === startTime.getTime();
+                                        const canFit = item.type === 'free' && item.duration >= duration;
+                                        const isDraft = item.source === 'session';
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                className="timeline-item"
+                                                onClick={() => item.type === 'free' && setStartTime(item.start)}
+                                                style={{
+                                                    padding: isMobile ? '10px 12px' : '12px 16px',
+                                                    borderRadius: isMobile ? '10px' : '12px',
+                                                    background: isSelected ? 'rgba(255, 255, 255, 0.25)' : isDraft ? 'rgba(102, 126, 234, 0.15)' : item.type === 'task' ? 'rgba(239, 68, 68, 0.15)' : 'rgba(255,255,255,0.08)',
+                                                    border: isMobile ? '1px solid' : '2px solid',
+                                                    borderColor: isSelected ? 'white' : isDraft ? '#667eea' : item.type === 'task' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.15)',
+                                                    cursor: item.type === 'task' && !isDraft ? 'default' : 'pointer',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    opacity: item.type === 'free' && !canFit ? 0.6 : 1
+                                                }}
+                                            >
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ fontSize: isMobile ? '0.8rem' : '0.9rem', fontWeight: '800', color: 'white' }}>
+                                                        {format(item.start, 'h:mm a')} - {format(item.end, 'h:mm a')}
+                                                    </div>
+                                                    {item.type === 'free' ? (
+                                                        <div style={{ fontSize: isMobile ? '0.6rem' : '0.7rem', color: 'rgba(255,255,255,0.7)', marginTop: '2px', fontWeight: '600' }}>
+                                                            {Math.floor(item.duration)} min free
+                                                        </div>
+                                                    ) : (
+                                                        <div style={{ fontSize: isMobile ? '0.6rem' : '0.65rem', color: 'rgba(255,255,255,0.6)', maxWidth: isMobile ? '140px' : '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: '600', marginTop: '1px' }}>
+                                                            {item.title}
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    {item.type === 'task' ? (
+                                                        <>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setTitle(item.title);
+                                                                    setDesc(item.description || '');
+                                                                    setPriority(item.priority);
+                                                                    setDuration(item.duration);
+                                                                    setStartTime(item.start);
+                                                                    setEditingTaskId(item.id);
+                                                                }}
+                                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px', borderRadius: '6px', cursor: 'pointer' }}
+                                                            >
+                                                                <Edit2 size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (isDraft) {
+                                                                        setSessionTasks(sessionTasks.filter(t => t.id !== item.id));
+                                                                    } else {
+                                                                        if (window.confirm('Delete this task from database?')) {
+                                                                            await deleteTask(item.id.replace('db_', ''));
+                                                                        }
+                                                                    }
+                                                                    if (editingTaskId === item.id) {
+                                                                        setEditingTaskId(null);
+                                                                        setTitle('');
+                                                                        setDesc('');
+                                                                        setStartTime(null);
+                                                                    }
+                                                                }}
+                                                                style={{ background: 'rgba(239, 68, 68, 0.2)', border: 'none', color: '#f87171', padding: '6px', borderRadius: '6px', cursor: 'pointer' }}
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                            {isDraft ? (
+                                                                <div style={{ fontSize: '0.6rem', background: '#667eea', color: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>PLAN</div>
+                                                            ) : (
+                                                                <div style={{ fontSize: '0.6rem', background: 'rgba(239, 68, 68, 0.4)', color: 'white', padding: '2px 4px', borderRadius: '4px', fontWeight: '800' }}>LIVE</div>
+                                                            )}
+                                                        </>
+                                                    ) : isSelected ? (
+                                                        <div style={{ background: 'white', color: '#667eea', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: '900', padding: isMobile ? '4px 10px' : '6px 12px', borderRadius: isMobile ? '6px' : '8px', boxShadow: '0 4px 12px rgba(255,255,255,0.3)' }}>SELECTED</div>
+                                                    ) : canFit ? (
+                                                        <div style={{ color: 'white', fontSize: isMobile ? '0.7rem' : '0.8rem', fontWeight: '700' }}>Select</div>
+                                                    ) : (
+                                                        <div style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: '600' }}>Full</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        )}
+
+                        {/* Save as Template Section - Desktop Only, in Left Column */}
+                        {!isMobile && (
+                            <div className="glass-card" style={{ padding: '20px', marginTop: '20px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+                                    <Save size={20} color="white" />
+                                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '800', color: 'white' }}>Save as Template</h4>
+                                </div>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input
+                                        placeholder="Template name..."
+                                        value={templateName}
+                                        onChange={e => setTemplateName(e.target.value)}
+                                        className="planning-input"
+                                        style={{ flex: 1, background: 'rgba(255,255,255,0.15)', border: '2px solid rgba(255,255,255,0.25)', color: 'white', padding: '12px 16px', borderRadius: '10px', fontSize: '0.95rem', fontWeight: '600' }}
+                                    />
+                                    <button
+                                        disabled={!templateName.trim() || isSavingTemplate}
+                                        onClick={handleSaveAsTemplate}
+                                        style={{
+                                            background: templateName.trim() ? 'linear-gradient(135deg, #ffffff, #f0f0f0)' : 'rgba(255,255,255,0.1)',
+                                            border: 'none',
+                                            color: templateName.trim() ? '#667eea' : 'rgba(255,255,255,0.4)',
+                                            padding: '0 20px',
+                                            borderRadius: '10px',
+                                            fontWeight: '800',
+                                            cursor: templateName.trim() ? 'pointer' : 'not-allowed',
+                                            transition: 'all 0.2s',
+                                            fontSize: '0.9rem',
+                                            boxShadow: templateName.trim() ? '0 4px 12px rgba(255, 255, 255, 0.3)' : 'none'
+                                        }}
+                                    >
+                                        {isSavingTemplate ? '...' : 'Save'}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Right Column (Bottom on Mobile): Task Form */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
+                        <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                            <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Task Title</label>
                             <input
                                 autoFocus
                                 className="planning-input"
                                 placeholder="What needs to be done?"
                                 value={title}
                                 onChange={e => setTitle(e.target.value)}
-                                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '18px', borderRadius: '12px', fontSize: '1.25rem', fontWeight: '500' }}
+                                style={{
+                                    width: '100%',
+                                    background: 'rgba(255,255,255,0.2)',
+                                    border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
+                                    color: 'white',
+                                    padding: isMobile ? '12px 14px' : '14px 18px',
+                                    borderRadius: isMobile ? '10px' : '12px',
+                                    fontSize: isMobile ? '0.95rem' : '1.1rem',
+                                    fontWeight: '700'
+                                }}
                             />
                         </div>
 
-                        <div className="glass-card">
-                            <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Detailed Mission Description (Optional)</label>
+                        <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                            <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Description (Optional)</label>
                             <textarea
                                 placeholder="Add notes, links, or expectations..."
                                 value={desc}
                                 onChange={e => setDesc(e.target.value)}
-                                style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '18px', borderRadius: '12px', fontSize: '1rem', minHeight: '120px', resize: 'vertical' }}
+                                className="planning-input"
+                                style={{
+                                    width: '100%',
+                                    background: 'rgba(255,255,255,0.15)',
+                                    border: isMobile ? '1px solid rgba(255,255,255,0.25)' : '2px solid rgba(255,255,255,0.25)',
+                                    color: 'white',
+                                    padding: isMobile ? '12px 14px' : '14px 18px',
+                                    borderRadius: isMobile ? '10px' : '12px',
+                                    fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                    minHeight: isMobile ? '80px' : '100px',
+                                    resize: 'vertical',
+                                    fontWeight: '500'
+                                }}
                             />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                            <div className="glass-card">
-                                <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Set Priority</label>
-                                <select
-                                    value={priority}
-                                    onChange={e => setPriority(e.target.value)}
-                                    style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '16px', borderRadius: '12px', fontSize: '1rem' }}
-                                >
-                                    <option value="High">🔴 High Priority</option>
-                                    <option value="Medium">🟡 Medium Priority</option>
-                                    <option value="Low">🟢 Low Priority</option>
-                                </select>
-                            </div>
-                            <div className="glass-card">
-                                <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Estimated Duration</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <input
-                                        type="number"
-                                        value={duration}
-                                        onChange={e => setDuration(parseInt(e.target.value) || 0)}
-                                        style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '16px', borderRadius: '12px', fontSize: '1.25rem', fontWeight: '600' }}
-                                    />
-                                    <span style={{ color: 'rgba(255,255,255,0.4)', fontWeight: '500' }}>min</span>
+                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '12px' : '16px' }}>
+                            <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                                <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Priority</label>
+                                <div style={{ position: 'relative' }}>
+                                    <select
+                                        value={priority}
+                                        onChange={e => setPriority(e.target.value as Priority)}
+                                        className="planning-input"
+                                        style={{
+                                            width: '100%',
+                                            background: 'rgba(255,255,255,0.2)',
+                                            border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
+                                            color: 'white',
+                                            padding: isMobile ? '10px 14px' : '12px 18px',
+                                            borderRadius: isMobile ? '10px' : '12px',
+                                            fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                            appearance: 'none',
+                                            cursor: 'pointer',
+                                            fontWeight: '700'
+                                        }}
+                                    >
+                                        <option value="High" style={{ background: '#1e293b', color: 'white' }}>🔴 High</option>
+                                        <option value="Medium" style={{ background: '#1e293b', color: 'white' }}>🟡 Medium</option>
+                                        <option value="Low" style={{ background: '#1e293b', color: 'white' }}>🟢 Low</option>
+                                    </select>
+                                    <div style={{ position: 'absolute', right: isMobile ? '12px' : '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'white', opacity: 0.5, fontSize: '0.7rem' }}>
+                                        ▼
+                                    </div>
                                 </div>
+                            </div>
+                            <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                                <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Duration (min)</label>
+                                <input
+                                    type="number"
+                                    value={duration}
+                                    onChange={e => setDuration(parseInt(e.target.value) || 0)}
+                                    className="planning-input"
+                                    style={{
+                                        width: '100%',
+                                        background: 'rgba(255,255,255,0.2)',
+                                        border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
+                                        color: 'white',
+                                        padding: isMobile ? '10px 14px' : '12px 18px',
+                                        borderRadius: isMobile ? '10px' : '12px',
+                                        fontSize: isMobile ? '0.95rem' : '1.1rem',
+                                        fontWeight: '700'
+                                    }}
+                                />
                             </div>
                         </div>
 
-                        <div className="glass-card" style={{ border: '1px solid rgba(102, 126, 234, 0.3)', background: 'rgba(102, 126, 234, 0.03)' }}>
-                            <label style={{ display: 'block', marginBottom: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: '500', fontSize: '0.9rem' }}>Exact Start Time</label>
-                            <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                        <div className="glass-card" style={{ padding: isMobile ? '8px 12px' : '10px 14px', border: isMobile ? '1px solid rgba(255, 255, 255, 0.4)' : '2px solid rgba(255, 255, 255, 0.4)', background: 'rgba(255, 255, 255, 0.15)' }}>
+                            <label style={{ display: 'block', marginBottom: isMobile ? '4px' : '6px', color: 'white', fontWeight: '800', fontSize: isMobile ? '0.65rem' : '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9 }}>⏰ {isMobile ? 'Start' : 'Start Time'}</label>
+                            <div style={{ display: 'flex', gap: isMobile ? '6px' : '10px', alignItems: 'center' }}>
                                 <input
                                     type="time"
                                     className="planning-input"
@@ -1098,11 +1702,21 @@ function PlanningPageView({
                                         const [h, m] = e.target.value.split(':').map(Number);
                                         setStartTime(setHours(setMinutes(startOfDay(selectedDate), m), h));
                                     }}
-                                    style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '20px', borderRadius: '12px', fontSize: '1.5rem', fontWeight: '700', transition: 'all 0.2s' }}
+                                    style={{
+                                        flex: 2,
+                                        minWidth: '100px',
+                                        background: 'rgba(255,255,255,0.25)',
+                                        border: isMobile ? '1px solid rgba(255,255,255,0.4)' : '2px solid rgba(255,255,255,0.4)',
+                                        color: 'white',
+                                        padding: isMobile ? '6px 10px' : '8px 12px',
+                                        borderRadius: isMobile ? '8px' : '10px',
+                                        fontSize: isMobile ? '0.9rem' : '1.05rem',
+                                        fontWeight: '800'
+                                    }}
                                 />
-                                <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                                    <span style={{ display: 'block', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', marginBottom: '4px' }}>Ending At</span>
-                                    <span style={{ fontSize: '1rem', fontWeight: '600', color: '#667eea' }}>
+                                <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.1)', padding: isMobile ? '4px 6px' : '6px 10px', borderRadius: isMobile ? '8px' : '10px' }}>
+                                    <span style={{ display: 'block', fontSize: '0.55rem', color: 'white', textTransform: 'uppercase', marginBottom: '1px', fontWeight: '700', opacity: 0.7 }}>Ends</span>
+                                    <span style={{ fontSize: isMobile ? '0.8rem' : '0.95rem', fontWeight: '900', color: 'white' }}>
                                         {startTime ? format(addMinutesFn(startTime, duration), 'h:mm a') : '--:--'}
                                     </span>
                                 </div>
@@ -1110,129 +1724,285 @@ function PlanningPageView({
                         </div>
 
                         <button
-                            onClick={onSave}
-                            disabled={!title.trim() || !startTime || isSaving}
+                            onClick={handleAddToPlan}
+                            disabled={!title.trim() || !startTime || finalizeLoading}
                             className="primary-btn"
                             style={{
-                                marginTop: '10px',
-                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                marginTop: isMobile ? '6px' : '8px',
+                                background: (!title.trim() || !startTime) ? 'rgba(255,255,255,0.2)' : 'linear-gradient(135deg, #ffffff, #f0f0f0)',
                                 border: 'none',
-                                color: 'white',
-                                padding: '24px',
-                                borderRadius: '16px',
-                                fontWeight: '800',
-                                fontSize: '1.2rem',
-                                cursor: 'pointer',
-                                boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
-                                opacity: (!title.trim() || !startTime || isSaving) ? 0.5 : 1,
+                                color: (!title.trim() || !startTime) ? 'rgba(255,255,255,0.5)' : '#667eea',
+                                padding: isMobile ? '14px 18px' : '18px 24px',
+                                borderRadius: isMobile ? '10px' : '12px',
+                                fontWeight: '900',
+                                fontSize: isMobile ? '0.95rem' : '1.15rem',
+                                cursor: (!title.trim() || !startTime) ? 'not-allowed' : 'pointer',
+                                boxShadow: (!title.trim() || !startTime) ? 'none' : '0 10px 30px rgba(255, 255, 255, 0.3)',
+                                textTransform: 'uppercase',
+                                letterSpacing: isMobile ? '0.5px' : '1px',
+                                width: '100%'
                             }}
                         >
-                            {isSaving ? 'Building Mission...' : 'Schedule Task'}
+                            {editingTaskId ? '✓ Update Plan' : '✓ Add to Plan'}
                         </button>
-                    </div>
 
-                    {/* Timeline Section */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: '600' }}>Schedule & Gaps</h3>
-                            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>Click a gap to select</span>
-                        </div>
+                        {sessionTasks.length > 0 && (
+                            <button
+                                onClick={handleFinalizeSchedule}
+                                disabled={finalizeLoading}
+                                style={{
+                                    marginTop: '8px',
+                                    background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                                    border: 'none',
+                                    color: '#0f172a',
+                                    padding: isMobile ? '14px 18px' : '16px 20px',
+                                    borderRadius: isMobile ? '10px' : '12px',
+                                    fontWeight: '900',
+                                    fontSize: isMobile ? '0.9rem' : '1rem',
+                                    cursor: 'pointer',
+                                    width: '100%',
+                                    boxShadow: '0 6px 20px rgba(255, 215, 0, 0.3)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px'
+                                }}
+                            >
+                                {finalizeLoading ? 'Saving...' : 'SAVE'}
+                            </button>
+                        )}
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '720px', overflowY: 'auto', paddingRight: '8px' }}>
-                            {(() => {
-                                const events = getEventsForDay(selectedDate)
-                                    .filter((e: any) => e.type === 'task')
-                                    .sort((a: any, b: any) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
-                                const dayTimeline: any[] = [];
-                                let lastTime = startOfDay(selectedDate);
-
-                                events.forEach((event: any) => {
-                                    const eStart = new Date(event.start);
-                                    const eEnd = event.end ? new Date(event.end) : addMinutesFn(eStart, 30);
-
-                                    if (eStart > lastTime) {
-                                        dayTimeline.push({
-                                            type: 'free',
-                                            start: lastTime,
-                                            end: eStart,
-                                            duration: (eStart.getTime() - lastTime.getTime()) / (1000 * 60)
-                                        });
-                                    }
-
-                                    dayTimeline.push({
-                                        type: 'task',
-                                        title: event.title,
-                                        start: eStart,
-                                        end: eEnd
-                                    });
-
-                                    lastTime = eEnd;
-                                });
-
-                                const endOfDay = setHours(setMinutes(startOfDay(selectedDate), 59), 23);
-                                if (lastTime < endOfDay) {
-                                    dayTimeline.push({
-                                        type: 'free',
-                                        start: lastTime,
-                                        end: endOfDay,
-                                        duration: (endOfDay.getTime() - lastTime.getTime()) / (1000 * 60)
-                                    });
-                                }
-
-                                return dayTimeline.map((item, i) => {
-                                    const isSelected = item.type === 'free' && startTime && item.start.getTime() === startTime.getTime();
-                                    const canFit = item.type === 'free' && item.duration >= duration;
-
-                                    return (
-                                        <div
-                                            key={i}
-                                            className="timeline-item"
-                                            onClick={() => item.type === 'free' && setStartTime(item.start)}
+                        {/* Save as Template Section - Only on Mobile, After Schedule Button */}
+                        {isMobile && (
+                            <div className="glass-card" style={{ marginTop: '16px' }}>
+                                <div
+                                    onClick={() => setIsSaveTemplateExpanded(!isSaveTemplateExpanded)}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '8px',
+                                        marginBottom: !isSaveTemplateExpanded ? '0' : '12px',
+                                        cursor: 'pointer',
+                                        userSelect: 'none'
+                                    }}
+                                >
+                                    <Save size={16} color="white" />
+                                    <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: '800', color: 'white', flex: 1 }}>Save as Template</h4>
+                                    <div style={{ fontSize: '1.2rem', color: 'white', transform: isSaveTemplateExpanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.3s' }}>
+                                        ▼
+                                    </div>
+                                </div>
+                                {isSaveTemplateExpanded && (
+                                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                        <input
+                                            placeholder="Template name..."
+                                            value={templateName}
+                                            onChange={e => setTemplateName(e.target.value)}
+                                            className="planning-input"
+                                            style={{ flex: 1, minWidth: '100%', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', color: 'white', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600' }}
+                                        />
+                                        <button
+                                            disabled={!templateName.trim() || isSavingTemplate}
+                                            onClick={handleSaveAsTemplate}
                                             style={{
-                                                padding: '16px',
-                                                borderRadius: '12px',
-                                                background: isSelected ? 'rgba(102, 126, 234, 0.2)' : item.type === 'task' ? 'rgba(239, 68, 68, 0.05)' : 'rgba(255,255,255,0.03)',
-                                                border: '1px solid',
-                                                borderColor: isSelected ? '#667eea' : item.type === 'task' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(255,255,255,0.08)',
-                                                cursor: item.type === 'task' ? 'default' : 'pointer',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                opacity: item.type === 'free' && !canFit ? 0.6 : 1
+                                                background: templateName.trim() ? 'linear-gradient(135deg, #ffffff, #f0f0f0)' : 'rgba(255,255,255,0.1)',
+                                                border: 'none',
+                                                color: templateName.trim() ? '#667eea' : 'rgba(255,255,255,0.4)',
+                                                padding: '10px 18px',
+                                                borderRadius: '8px',
+                                                fontWeight: '800',
+                                                cursor: templateName.trim() ? 'pointer' : 'not-allowed',
+                                                transition: 'all 0.2s',
+                                                fontSize: '0.8rem',
+                                                boxShadow: templateName.trim() ? '0 4px 12px rgba(255, 255, 255, 0.3)' : 'none',
+                                                minWidth: '100%'
                                             }}
                                         >
-                                            <div>
-                                                <div style={{ fontSize: '0.9rem', fontWeight: '700', color: 'white' }}>
-                                                    {format(item.start, 'h:mm a')} - {format(item.end, 'h:mm a')}
-                                                </div>
-                                                {item.type === 'free' && (
-                                                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>
-                                                        {Math.floor(item.duration)} min available
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {item.type === 'task' ? (
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: '600', color: '#fca5a5' }}>OCCUPIED</div>
-                                                    <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.title}</div>
-                                                </div>
-                                            ) : isSelected ? (
-                                                <div style={{ background: '#667eea', color: 'white', fontSize: '0.7rem', fontWeight: '800', padding: '4px 8px', borderRadius: '4px' }}>SELECTED</div>
-                                            ) : canFit ? (
-                                                <div style={{ color: '#667eea', fontSize: '0.75rem', fontWeight: '600' }}>Plan here</div>
-                                            ) : (
-                                                <div style={{ color: 'rgba(239, 68, 68, 0.5)', fontSize: '0.75rem' }}>Too short</div>
-                                            )}
-                                        </div>
-                                    );
-                                });
-                            })()}
-                        </div>
+                                            {isSavingTemplate ? '...' : 'Save'}
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Template Preview Modal */}
+            {previewingTemplate && (
+                <div style={{
+                    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                    background: 'rgba(0,0,0,0.8)', zIndex: 5000,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    padding: '20px', backdropFilter: 'blur(8px)',
+                    animation: 'fadeIn 0.2s ease-out'
+                }} onClick={() => setPreviewingTemplate(null)}>
+                    <div className="glass-card" style={{
+                        maxWidth: '500px', width: '100%', maxHeight: '80vh',
+                        display: 'flex', flexDirection: 'column',
+                        background: 'rgba(15, 23, 42, 0.95)',
+                        border: '1px solid rgba(255,255,255,0.2)',
+                        padding: isMobile ? '20px' : '30px',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                    }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Library size={24} color="#fbbf24" />
+                                <h3 style={{ margin: 0, fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: '900', color: 'white' }}>{previewingTemplate.name}</h3>
+                            </div>
+                            <button onClick={() => setPreviewingTemplate(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex' }}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '8px', marginBottom: '24px' }}>
+                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                {previewingTemplate.slots.length} Tasks in this template
+                            </div>
+                            {previewingTemplate.slots.map((slot: TimeSlot, idx: number) => {
+                                const isEditingSlot = editingTaskId === `template_slot_${idx}`;
+                                return (
+                                    <div key={idx} style={{
+                                        padding: '16px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        borderRadius: '16px',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '8px',
+                                        position: 'relative'
+                                    }}>
+                                        {isEditingSlot ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                <input
+                                                    value={title}
+                                                    onChange={e => setTitle(e.target.value)}
+                                                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '6px 10px', borderRadius: '6px', fontSize: '0.9rem' }}
+                                                />
+                                                <div style={{ display: 'flex', gap: '8px' }}>
+                                                    <input
+                                                        type="time"
+                                                        value={startTime ? format(startTime, 'HH:mm') : slot.startTime}
+                                                        onChange={e => {
+                                                            const [h, m] = e.target.value.split(':').map(Number);
+                                                            setStartTime(setHours(setMinutes(startOfDay(new Date()), m), h));
+                                                        }}
+                                                        style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem' }}
+                                                    />
+                                                    <input
+                                                        type="number"
+                                                        value={duration}
+                                                        onChange={e => setDuration(parseInt(e.target.value) || 0)}
+                                                        style={{ width: '80px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem' }}
+                                                    />
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                                    <button
+                                                        onClick={async () => {
+                                                            const newSlots = [...previewingTemplate.slots];
+                                                            newSlots[idx] = {
+                                                                ...slot,
+                                                                title,
+                                                                startTime: startTime ? format(startTime, 'HH:mm') : slot.startTime,
+                                                                duration,
+                                                                priority
+                                                            };
+                                                            await updateTemplate(previewingTemplate.id, { slots: newSlots });
+                                                            setPreviewingTemplate({ ...previewingTemplate, slots: newSlots });
+                                                            setEditingTaskId(null);
+                                                            setTitle('');
+                                                            setStartTime(null);
+                                                        }}
+                                                        style={{ flex: 1, background: '#10b981', border: 'none', color: 'white', padding: '6px', borderRadius: '6px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                    >
+                                                        Save Slot
+                                                    </button>
+                                                    <button
+                                                        onClick={() => { setEditingTaskId(null); setTitle(''); }}
+                                                        style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px', borderRadius: '6px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div style={{ fontWeight: '800', color: 'white', fontSize: '1rem' }}>{slot.title}</div>
+                                                    <div style={{ display: 'flex', gap: '6px' }}>
+                                                        <button
+                                                            onClick={() => {
+                                                                setEditingTaskId(`template_slot_${idx}`);
+                                                                setTitle(slot.title);
+                                                                setDuration(slot.duration);
+                                                                setPriority(slot.priority);
+                                                                const [h, m] = slot.startTime.split(':').map(Number);
+                                                                setStartTime(setHours(setMinutes(startOfDay(new Date()), m), h));
+                                                            }}
+                                                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '4px', borderRadius: '4px', cursor: 'pointer' }}
+                                                        >
+                                                            <Edit2 size={12} />
+                                                        </button>
+                                                        <button
+                                                            onClick={async () => {
+                                                                if (window.confirm('Remove this task from template?')) {
+                                                                    const newSlots = previewingTemplate.slots.filter((_slot: TimeSlot, i: number) => i !== idx);
+                                                                    await updateTemplate(previewingTemplate.id, { slots: newSlots });
+                                                                    setPreviewingTemplate({ ...previewingTemplate, slots: newSlots });
+                                                                }
+                                                            }}
+                                                            style={{ background: 'rgba(239, 68, 68, 0.2)', border: 'none', color: '#f87171', padding: '4px', borderRadius: '4px', cursor: 'pointer' }}
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '4px' }}>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <Clock size={14} /> {slot.startTime}
+                                                    </div>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        <TrendingUp size={14} /> {slot.priority}
+                                                    </div>
+                                                    <div style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                                                        {slot.duration} min
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <button
+                                onClick={() => setPreviewingTemplate(null)}
+                                style={{
+                                    flex: 1, padding: '14px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '14px',
+                                    fontWeight: '800', cursor: 'pointer'
+                                }}
+                            >
+                                Close
+                            </button>
+                            <button
+                                onClick={() => { handleApplyTemplate(previewingTemplate); setPreviewingTemplate(null); }}
+                                style={{
+                                    flex: 2, padding: '14px',
+                                    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+                                    border: 'none', color: '#667eea', borderRadius: '14px',
+                                    fontWeight: '900', cursor: 'pointer',
+                                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.5px'
+                                }}
+                            >
+                                Apply Now
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

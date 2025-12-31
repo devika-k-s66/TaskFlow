@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import * as firestore from '../lib/firestore';
-import type { Task, Automation, Reminder, Routine } from '../types';
+import type { Task, Automation, Reminder, Routine, TimeTemplate } from '../types';
 
 export function useTasks() {
     const { user } = useAuth();
@@ -274,4 +274,68 @@ export function useRoutines() {
     };
 
     return { routines, loading, addRoutine, updateRoutine, deleteRoutine };
+}
+export function useTemplates() {
+    const { user } = useAuth();
+    const [templates, setTemplates] = useState<TimeTemplate[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!user) {
+            setTemplates([]);
+            setLoading(false);
+            return;
+        }
+
+        const fetchTemplates = async () => {
+            setLoading(true);
+            try {
+                const data = await firestore.getTemplates(user.uid);
+                setTemplates(data);
+            } catch (error) {
+                console.error("Error fetching templates:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchTemplates();
+    }, [user]);
+
+    const addTemplate = async (templateData: Omit<TimeTemplate, 'id' | 'createdAt'>) => {
+        if (!user) return;
+        try {
+            const id = await firestore.addTemplate(user.uid, templateData);
+            const newTemplate: TimeTemplate = { ...templateData, id, createdAt: new Date() };
+            setTemplates(prev => [newTemplate, ...prev]);
+            return id;
+        } catch (error) {
+            console.error("Error adding template:", error);
+            throw error;
+        }
+    };
+
+    const updateTemplate = async (id: string, updates: Partial<TimeTemplate>) => {
+        if (!user) return;
+        try {
+            await firestore.updateTemplate(user.uid, id, updates);
+            setTemplates(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+        } catch (error) {
+            console.error("Error updating template:", error);
+            throw error;
+        }
+    };
+
+    const deleteTemplate = async (id: string) => {
+        if (!user) return;
+        try {
+            await firestore.deleteTemplate(user.uid, id);
+            setTemplates(prev => prev.filter(t => t.id !== id));
+        } catch (error) {
+            console.error("Error deleting template:", error);
+            throw error;
+        }
+    };
+
+    return { templates, loading, addTemplate, updateTemplate, deleteTemplate };
 }

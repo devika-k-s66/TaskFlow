@@ -11,7 +11,7 @@ import {
     serverTimestamp,
 } from 'firebase/firestore';
 import { db } from './firebase';
-import type { Task, Automation, Routine, Reminder } from '../types';
+import type { Task, Automation, Routine, Reminder, TimeTemplate } from '../types';
 
 // Helper to convert Firestore timestamps to Date objects
 const convertTimestamps = (data: any) => {
@@ -225,6 +225,56 @@ export const deleteReminder = async (userId: string, reminderId: string) => {
         await deleteDoc(reminderRef);
     } catch (error) {
         console.error('Error deleting reminder:', error);
+        throw error;
+    }
+};
+// ==================== TEMPLATES ====================
+export const getTemplates = async (userId: string): Promise<TimeTemplate[]> => {
+    try {
+        const templatesRef = collection(db, `users/${userId}/templates`);
+        const q = query(templatesRef, orderBy('createdAt', 'desc'));
+        const querySnapshot = await getDocs(q);
+
+        return querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...convertTimestamps(doc.data()),
+        } as TimeTemplate));
+    } catch (error) {
+        console.error('Error getting templates:', error);
+        return [];
+    }
+};
+
+export const addTemplate = async (userId: string, template: Omit<TimeTemplate, 'id' | 'createdAt'>) => {
+    try {
+        const templatesRef = collection(db, `users/${userId}/templates`);
+        const docRef = await addDoc(templatesRef, {
+            ...template,
+            createdAt: serverTimestamp(),
+        });
+        return docRef.id;
+    } catch (error) {
+        console.error('Error adding template:', error);
+        throw error;
+    }
+};
+
+export const updateTemplate = async (userId: string, templateId: string, updates: Partial<TimeTemplate>) => {
+    try {
+        const templateRef = doc(db, `users/${userId}/templates/${templateId}`);
+        await updateDoc(templateRef, updates);
+    } catch (error) {
+        console.error('Error updating template:', error);
+        throw error;
+    }
+};
+
+export const deleteTemplate = async (userId: string, templateId: string) => {
+    try {
+        const templateRef = doc(db, `users/${userId}/templates/${templateId}`);
+        await deleteDoc(templateRef);
+    } catch (error) {
+        console.error('Error deleting template:', error);
         throw error;
     }
 };

@@ -633,7 +633,7 @@ export default function CalendarPage() {
                                     key={index}
                                     style={{
                                         background: day
-                                            ? (isToday ? 'rgba(102, 126, 234, 0.15)' : 'rgba(255,255,255,0.03)')
+                                            ? (isToday ? 'rgba(255, 255, 255, 0.15)' : 'rgba(255,255,255,0.03)')
                                             : 'rgba(0,0,0,0.1)',
                                         padding: isMobile ? '4px' : '12px',
                                         minHeight: isMobile ? '80px' : '140px',
@@ -657,7 +657,7 @@ export default function CalendarPage() {
                                     onMouseLeave={(e) => {
                                         if (day) {
                                             e.currentTarget.style.background = isToday
-                                                ? 'rgba(102, 126, 234, 0.15)'
+                                                ? 'rgba(255, 255, 255, 0.15)'
                                                 : 'rgba(255,255,255,0.03)';
                                             e.currentTarget.style.transform = 'scale(1)';
                                             e.currentTarget.style.zIndex = '1';
@@ -676,15 +676,15 @@ export default function CalendarPage() {
                                                 <span style={{
                                                     fontWeight: isToday ? '700' : '600',
                                                     fontSize: isMobile ? '0.8125rem' : '1rem',
-                                                    color: isToday ? 'white' : 'rgba(255,255,255,0.8)',
-                                                    background: isToday ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
+                                                    color: isToday ? 'black' : 'rgba(255,255,255,0.8)',
+                                                    background: isToday ? 'white' : 'transparent',
                                                     width: isToday ? (isMobile ? '24px' : '32px') : 'auto',
                                                     height: isToday ? (isMobile ? '24px' : '32px') : 'auto',
                                                     borderRadius: isToday ? '50%' : '0',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    boxShadow: isToday ? '0 4px 12px rgba(102, 126, 234, 0.4)' : 'none'
+                                                    boxShadow: isToday ? '0 4px 12px rgba(255, 255, 255, 0.4)' : 'none'
                                                 }}>
                                                     {day}
                                                 </span>
@@ -816,8 +816,8 @@ export default function CalendarPage() {
                                     <div style={{
                                         fontSize: '1.5rem',
                                         fontWeight: '700',
-                                        color: isToday ? 'white' : 'rgba(255,255,255,0.9)',
-                                        background: isToday ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
+                                        color: isToday ? 'black' : 'rgba(255,255,255,0.9)',
+                                        background: isToday ? 'white' : 'transparent',
                                         width: isToday ? '48px' : 'auto',
                                         height: isToday ? '48px' : 'auto',
                                         borderRadius: isToday ? '50%' : '0',
@@ -1140,7 +1140,7 @@ function PlanningPageView({
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--bg-main)',
             zIndex: 4000,
             overflowY: 'auto',
             animation: 'fadeIn 0.3s ease-out',
@@ -1158,7 +1158,7 @@ function PlanningPageView({
                 .planning-input::placeholder { color: rgba(255,255,255,0.5) !important; }
                 
                 .glass-card { 
-                    background: rgba(15, 23, 42, 0.4); 
+                    background: rgba(17, 18, 13, 0.4); 
                     border: 1px solid rgba(255,255,255,0.15); 
                     border-radius: 16px; 
                     padding: 20px; 
@@ -1166,7 +1166,7 @@ function PlanningPageView({
                     backdrop-filter: blur(20px);
                 }
                 .glass-card:hover { 
-                    background: rgba(15, 23, 42, 0.5); 
+                    background: rgba(17, 18, 13, 0.6); 
                     border-color: rgba(255,255,255,0.3);
                     transform: translateY(-2px);
                     box-shadow: 0 12px 30px rgba(0,0,0,0.3);
@@ -1352,7 +1352,7 @@ function PlanningPageView({
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleApplyTemplate(t); }}
                                                         style={{
-                                                            background: 'linear-gradient(135deg, #ffffff, #f0f0f0)', border: 'none', color: '#667eea',
+                                                            background: 'linear-gradient(135deg, #ffffff, #f0f0f0)', border: 'none', color: 'black',
                                                             padding: isMobile ? '6px 12px' : '8px 14px', borderRadius: isMobile ? '6px' : '8px', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: '800', cursor: 'pointer',
                                                             boxShadow: '0 4px 12px rgba(255, 255, 255, 0.3)', transition: 'all 0.2s', flexShrink: 0,
                                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -1536,13 +1536,13 @@ function PlanningPageView({
                                                                 <Trash2 size={14} />
                                                             </button>
                                                             {isDraft ? (
-                                                                <div style={{ fontSize: '0.6rem', background: '#667eea', color: 'white', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>PLAN</div>
+                                                                <div style={{ fontSize: '0.6rem', background: 'white', color: 'black', padding: '2px 6px', borderRadius: '4px', fontWeight: '900' }}>PLAN</div>
                                                             ) : (
                                                                 <div style={{ fontSize: '0.6rem', background: 'rgba(239, 68, 68, 0.4)', color: 'white', padding: '2px 4px', borderRadius: '4px', fontWeight: '800' }}>LIVE</div>
                                                             )}
                                                         </>
                                                     ) : isSelected ? (
-                                                        <div style={{ background: 'white', color: '#667eea', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: '900', padding: isMobile ? '4px 10px' : '6px 12px', borderRadius: isMobile ? '6px' : '8px', boxShadow: '0 4px 12px rgba(255,255,255,0.3)' }}>SELECTED</div>
+                                                        <div style={{ background: 'white', color: 'black', fontSize: isMobile ? '0.65rem' : '0.75rem', fontWeight: '900', padding: isMobile ? '4px 10px' : '6px 12px', borderRadius: isMobile ? '6px' : '8px', boxShadow: '0 4px 12px rgba(255,255,255,0.3)' }}>SELECTED</div>
                                                     ) : canFit ? (
                                                         <div style={{ color: 'white', fontSize: isMobile ? '0.7rem' : '0.8rem', fontWeight: '700' }}>Select</div>
                                                     ) : (
@@ -1577,7 +1577,7 @@ function PlanningPageView({
                                         style={{
                                             background: templateName.trim() ? 'linear-gradient(135deg, #ffffff, #f0f0f0)' : 'rgba(255,255,255,0.1)',
                                             border: 'none',
-                                            color: templateName.trim() ? '#667eea' : 'rgba(255,255,255,0.4)',
+                                            color: templateName.trim() ? 'black' : 'rgba(255,255,255,0.4)',
                                             padding: '0 20px',
                                             borderRadius: '10px',
                                             fontWeight: '800',

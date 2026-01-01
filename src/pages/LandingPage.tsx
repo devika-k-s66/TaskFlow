@@ -26,7 +26,7 @@ export default function LandingPage() {
             title: 'Automates Your Daily Life',
             description: 'Instead of manually managing tasks, the system works for you. Create smart automations using Trigger → Condition → Action.',
             example: '“Every weekday at 9 AM, prepare my work tasks automatically.”',
-            color: '#667eea'
+            color: 'var(--primary)'
         },
         {
             icon: <CheckCircle size={30} />,
@@ -107,7 +107,7 @@ export default function LandingPage() {
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+            background: 'var(--gradient-main)'
         }}>
             <HeroSection />
 
@@ -116,7 +116,7 @@ export default function LandingPage() {
                 <div className="features-grid">
                     {features.map((f, i) => (
                         <div key={i} className="feature-card animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
-                            <div className="feature-icon-wrapper" style={{ color: f.color }}>
+                            <div className="feature-icon-wrapper" style={{ color: f.color === '#667eea' ? 'var(--primary)' : f.color }}>
                                 {f.icon}
                             </div>
                             <h3>{f.title}</h3>
@@ -134,7 +134,7 @@ export default function LandingPage() {
                         <div key={i} className="audience-card">
                             <span className="audience-tag">{a.tag}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                                <div style={{ color: '#667eea' }}>{a.icon}</div>
+                                <div style={{ color: 'var(--primary)' }}>{a.icon}</div>
                                 <h4 style={{ margin: 0, fontWeight: 700 }}>{a.title}</h4>
                             </div>
                             <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>{a.desc}</p>

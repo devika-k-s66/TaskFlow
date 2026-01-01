@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Plus, Clock, MoreVertical, Filter, Grid, List, Trash2 } from 'lucide-react';
 import CreateTaskModal from '../components/CreateTaskModal';
+import { useLocation } from 'react-router-dom';
 import { useTasks } from '../hooks/useFirestore';
-import { format, isToday, isThisWeek } from 'date-fns';
+import { format, isToday, isPast } from 'date-fns';
 import type { Task } from '../types';
 
 export default function TasksPage() {
     const { tasks, loading, updateTask, deleteTask } = useTasks();
+    const location = useLocation();
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
-    const [selectedFilter, setSelectedFilter] = useState('all');
+    const [selectedFilter, setSelectedFilter] = useState(location.state?.filter || 'all');
     const [width, setWidth] = useState(window.innerWidth);
 
     useEffect(() => {
@@ -28,10 +30,32 @@ export default function TasksPage() {
     // Derived State for Filters
     const getFilteredTasks = () => {
         let filtered = tasks;
-        if (selectedFilter === 'today') filtered = tasks.filter(t => isToday(t.deadline));
-        else if (selectedFilter === 'week') filtered = tasks.filter(t => isThisWeek(t.deadline));
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        const getDiffDays = (date: Date) => Math.floor((date.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (selectedFilter === 'active') filtered = tasks.filter(t => !t.completed);
+        else if (selectedFilter === 'today') filtered = tasks.filter(t => isToday(t.deadline));
+        else if (selectedFilter === 'week') filtered = tasks.filter(t => {
+            const diff = getDiffDays(t.deadline);
+            return diff >= 0 && diff <= 7;
+        });
+        else if (selectedFilter === '2weeks') filtered = tasks.filter(t => {
+            const diff = getDiffDays(t.deadline);
+            return diff >= 0 && diff <= 14;
+        });
+        else if (selectedFilter === '3weeks') filtered = tasks.filter(t => {
+            const diff = getDiffDays(t.deadline);
+            return diff >= 0 && diff <= 21;
+        });
+        else if (selectedFilter === 'month') filtered = tasks.filter(t => {
+            const diff = getDiffDays(t.deadline);
+            return diff >= 0 && diff <= 30;
+        });
         else if (selectedFilter === 'completed') filtered = tasks.filter(t => t.completed);
         else if (selectedFilter === 'high') filtered = tasks.filter(t => t.priority === 'High');
+        else if (selectedFilter === 'overdue') filtered = tasks.filter(t => !t.completed && isPast(t.deadline));
 
         return filtered;
     };
@@ -40,8 +64,21 @@ export default function TasksPage() {
 
     const filters = [
         { id: 'all', label: 'All Tasks', count: tasks.length },
+        { id: 'active', label: 'Pending', count: tasks.filter(t => !t.completed).length },
         { id: 'today', label: 'Today', count: tasks.filter(t => isToday(t.deadline)).length },
-        { id: 'week', label: 'This Week', count: tasks.filter(t => isThisWeek(t.deadline)).length },
+        {
+            id: 'week', label: 'Week', count: tasks.filter(t => {
+                const diff = Math.floor((t.deadline.getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24));
+                return diff >= 0 && diff <= 7;
+            }).length
+        },
+        {
+            id: 'month', label: 'Month', count: tasks.filter(t => {
+                const diff = Math.floor((t.deadline.getTime() - new Date().setHours(0, 0, 0, 0)) / (1000 * 60 * 60 * 24));
+                return diff >= 0 && diff <= 30;
+            }).length
+        },
+        { id: 'overdue', label: 'Overdue', count: tasks.filter(t => !t.completed && isPast(t.deadline)).length },
         { id: 'completed', label: 'Completed', count: tasks.filter(t => t.completed).length },
         { id: 'high', label: 'High Priority', count: tasks.filter(t => t.priority === 'High').length },
     ];

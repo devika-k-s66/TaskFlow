@@ -132,12 +132,12 @@ export default function CalendarPage() {
             ? new Date(currentDate.getFullYear(), currentDate.getMonth(), day)
             : day;
 
-        const dayTasks = tasks.filter(t => !t.completed && isSameDay(t.deadline, date));
+        const dayTasks = tasks.filter(t => isSameDay(t.deadline, date));
         const dayReminders = reminders.filter(r => r.status === 'pending' && isSameDay(r.time, date));
 
         return [
-            ...dayTasks.map(t => ({ id: t.id, title: t.title, type: 'task' as const, priority: t.priority, start: t.deadline, end: t.endTime })),
-            ...dayReminders.map(r => ({ id: r.id, title: r.title, type: 'reminder' as const }))
+            ...dayTasks.map(t => ({ id: t.id, title: t.title, type: 'task' as const, priority: t.priority, start: t.deadline, end: t.endTime, completed: t.completed })),
+            ...dayReminders.map(r => ({ id: r.id, title: r.title, type: 'reminder' as const, completed: r.status === 'sent' }))
         ];
     };
 

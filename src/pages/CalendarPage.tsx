@@ -43,16 +43,39 @@ export default function CalendarPage() {
     const [taskDuration, setTaskDuration] = useState(60);
     const [taskStartTime, setTaskStartTime] = useState<Date | null>(null);
 
+    const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+
     const location = useLocation();
     const calendarRef = useRef<HTMLDivElement>(null);
 
     const [showDateSelectionPrompt, setShowDateSelectionPrompt] = useState(false);
 
     useEffect(() => {
-        if (location.state?.scrollToCalendar && calendarRef.current) {
+        const state = location.state as { scrollToCalendar?: boolean; editTask?: any } | null;
+
+        if (state?.scrollToCalendar && calendarRef.current) {
             calendarRef.current.scrollIntoView({ behavior: 'smooth' });
             setShowDateSelectionPrompt(true);
-            // Clear state
+        }
+
+        if (state?.editTask) {
+            const t = state.editTask;
+            const start = new Date(t.deadline);
+            setSelectedDateForCreation(start);
+            setTaskTitle(t.title);
+            setTaskDesc(t.description || '');
+            setTaskPriority(t.priority as Priority);
+
+            let dur = 60;
+            if (t.endTime) {
+                dur = Math.round((new Date(t.endTime).getTime() - start.getTime()) / 60000);
+            }
+            setTaskDuration(dur);
+            setTaskStartTime(start);
+            setEditingTaskId(`db_${t.id}`);
+        }
+
+        if (state) {
             window.history.replaceState({}, document.title);
         }
     }, [location]);
@@ -61,6 +84,13 @@ export default function CalendarPage() {
         const selected = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
         setSelectedDateForCreation(selected);
         setShowDateSelectionPrompt(false);
+        // Reset creating state when clicking a date manually
+        setEditingTaskId(null);
+        setTaskTitle('');
+        setTaskDesc('');
+        setTaskPriority('Medium');
+        setTaskDuration(60);
+        setTaskStartTime(null);
     };
 
 
@@ -936,6 +966,7 @@ export default function CalendarPage() {
                     priority={taskPriority} setPriority={setTaskPriority}
                     duration={taskDuration} setDuration={setTaskDuration}
                     startTime={taskStartTime} setStartTime={setTaskStartTime}
+                    editingTaskId={editingTaskId} setEditingTaskId={setEditingTaskId}
                     isMobile={isMobile}
                     getEventsForDay={getEventsForDay}
                     addTask={addTask}
@@ -955,6 +986,7 @@ function PlanningPageView({
     priority, setPriority,
     duration, setDuration,
     startTime, setStartTime,
+    editingTaskId, setEditingTaskId,
     isMobile,
     getEventsForDay,
     addTask,
@@ -973,6 +1005,8 @@ function PlanningPageView({
     setDuration: (v: number) => void;
     startTime: Date | null;
     setStartTime: (v: Date | null) => void;
+    editingTaskId: string | null;
+    setEditingTaskId: (id: string | null) => void;
     isMobile: boolean;
     getEventsForDay: (day: number | Date) => { id: string; title: string; type: 'task' | 'reminder'; priority?: Priority; start?: Date; end?: Date; }[];
     addTask: (t: Omit<Task, 'id' | 'createdAt'>) => Promise<void>;
@@ -989,7 +1023,6 @@ function PlanningPageView({
     const [isSaveTemplateExpanded, setIsSaveTemplateExpanded] = useState(false);
     const [previewingTemplate, setPreviewingTemplate] = useState<TimeTemplate | null>(null);
     const [sessionTasks, setSessionTasks] = useState<any[]>([]);
-    const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
     const [finalizeLoading, setFinalizeLoading] = useState(false);
 
     const isOverlapping = (start: Date, duration_min: number, ignoreId?: string) => {

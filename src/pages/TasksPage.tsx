@@ -1,17 +1,58 @@
 import { useState, useEffect } from 'react';
-import { Plus, Clock, MoreVertical, Filter, Grid, List, Trash2 } from 'lucide-react';
-import CreateTaskModal from '../components/CreateTaskModal';
-import { useLocation } from 'react-router-dom';
+import { Plus, Clock, MoreVertical, Filter, Grid, List, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useLocation, useOutletContext } from 'react-router-dom';
 import { useTasks } from '../hooks/useFirestore';
-import { format, isToday, isPast } from 'date-fns';
+import { format, isToday, isPast, isSameDay, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth } from 'date-fns';
 import type { Task } from '../types';
 
 export default function TasksPage() {
     const { tasks, loading, updateTask, deleteTask } = useTasks();
     const location = useLocation();
+    const { onCreateTask } = useOutletContext<{ onCreateTask: () => void }>();
     const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [selectedFilter, setSelectedFilter] = useState(location.state?.filter || 'all');
     const [width, setWidth] = useState(window.innerWidth);
+
+    // Calendar State
+    const [viewDate, setViewDate] = useState(new Date());
+    const [tempStart, setTempStart] = useState<Date>(location.state?.rangeStart ? new Date(location.state.rangeStart) : startOfDay(new Date()));
+    const [tempEnd, setTempEnd] = useState<Date | null>(location.state?.rangeEnd ? new Date(location.state.rangeEnd) : null);
+
+    // Active Filter State
+    const [activeRangeStart, setActiveRangeStart] = useState<Date | null>(location.state?.rangeStart ? new Date(location.state.rangeStart) : null);
+    const [activeRangeEnd, setActiveRangeEnd] = useState<Date | null>(location.state?.rangeEnd ? new Date(location.state.rangeEnd) : null);
+
+    // Calendar Handlers
+    const handlePrevMonth = () => setViewDate(subMonths(viewDate, 1));
+    const handleNextMonth = () => setViewDate(addMonths(viewDate, 1));
+
+    const handleTempDateClick = (day: Date) => {
+        if (!tempStart || (tempStart && tempEnd)) {
+            setTempStart(day);
+            setTempEnd(null);
+        } else {
+            if (day < tempStart) {
+                setTempEnd(tempStart);
+                setTempStart(day);
+            } else if (day > tempStart) {
+                setTempEnd(day);
+            } else {
+                setTempStart(day);
+                setTempEnd(null);
+            }
+        }
+    };
+
+    const applySelection = () => {
+        setActiveRangeStart(tempStart);
+        setActiveRangeEnd(tempEnd);
+        setSelectedFilter('custom');
+    };
+
+    const calendarGrid = eachDayOfInterval({
+        start: startOfWeek(startOfMonth(viewDate)),
+        end: endOfWeek(endOfMonth(viewDate))
+    });
 
     useEffect(() => {
         const handleResize = () => setWidth(window.innerWidth);
@@ -23,39 +64,38 @@ export default function TasksPage() {
     const isTablet = width >= 768 && width < 1200;
     const isSmallPhone = width < 480;
 
-    // Modal State
-    const [showCreateModal, setShowCreateModal] = useState(false);
-
-
     // Derived State for Filters
     const getFilteredTasks = () => {
         let filtered = tasks;
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        const getDiffDays = (date: Date) => Math.floor((date.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
-
+        // 1. First apply the explicit status/type filter
         if (selectedFilter === 'active') filtered = tasks.filter(t => !t.completed);
         else if (selectedFilter === 'today') filtered = tasks.filter(t => isToday(t.deadline));
         else if (selectedFilter === 'week') filtered = tasks.filter(t => {
-            const diff = getDiffDays(t.deadline);
+            const diff = Math.floor((t.deadline.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
             return diff >= 0 && diff <= 7;
         });
-        else if (selectedFilter === '2weeks') filtered = tasks.filter(t => {
-            const diff = getDiffDays(t.deadline);
-            return diff >= 0 && diff <= 14;
-        });
-        else if (selectedFilter === '3weeks') filtered = tasks.filter(t => {
-            const diff = getDiffDays(t.deadline);
-            return diff >= 0 && diff <= 21;
-        });
         else if (selectedFilter === 'month') filtered = tasks.filter(t => {
-            const diff = getDiffDays(t.deadline);
+            const diff = Math.floor((t.deadline.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
             return diff >= 0 && diff <= 30;
         });
         else if (selectedFilter === 'completed') filtered = tasks.filter(t => t.completed);
         else if (selectedFilter === 'high') filtered = tasks.filter(t => t.priority === 'High');
         else if (selectedFilter === 'overdue') filtered = tasks.filter(t => !t.completed && isPast(t.deadline));
+
+        // 2. Then by date range
+        if (activeRangeStart) {
+            filtered = filtered.filter(t => {
+                const d = t.deadline;
+                if (!activeRangeEnd) {
+                    return isSameDay(d, activeRangeStart);
+                } else {
+                    return isWithinInterval(d, { start: startOfDay(activeRangeStart), end: endOfDay(activeRangeEnd) });
+                }
+            });
+        }
 
         return filtered;
     };
@@ -239,278 +279,227 @@ export default function TasksPage() {
                 width: '100%',
                 boxSizing: 'border-box'
             }}>
-                {/* Header Section */}
-                <div style={{
-                    display: 'flex',
-                    flexDirection: isSmallPhone ? 'column' : 'row',
-                    justifyContent: 'space-between',
-                    alignItems: isSmallPhone ? 'flex-start' : 'center',
-                    gap: isSmallPhone ? '20px' : '32px',
-                    marginBottom: isMobile ? '32px' : '48px'
-                }}>
-                    <div style={{ flex: 1 }}>
-                        <h1 style={{
-                            fontSize: isSmallPhone ? '1.75rem' : isMobile ? '2.25rem' : isTablet ? '2.75rem' : '3.5rem',
-                            fontWeight: '300',
-                            letterSpacing: isMobile ? '-1px' : '-2px',
-                            color: 'white',
-                            lineHeight: '1.1',
-                            marginBottom: '8px'
-                        }}>
-                            Mission <span style={{ fontWeight: '600' }}>Board</span>
-                        </h1>
-                        <p style={{
-                            color: 'rgba(255,255,255,0.85)',
-                            fontSize: isMobile ? '0.9rem' : '1.1rem',
-                            maxWidth: '400px'
-                        }}>
-                            Coordinate your objectives and maintain operational efficiency.
-                        </p>
-                    </div>
-                    <button className="btn btn-lg" onClick={() => setShowCreateModal(true)} style={{
-                        background: 'white',
-                        color: '#667eea',
-                        fontWeight: '600',
-                        border: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                        width: isSmallPhone ? '100%' : 'auto',
-                        justifyContent: 'center',
-                        padding: isMobile ? '12px 20px' : '14px 28px',
-                        borderRadius: '14px'
-                    }}>
-                        <Plus size={isMobile ? 18 : 20} />
-                        New Mission
-                    </button>
-                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: width > 1200 ? '280px 1fr' : '1fr', gap: '32px', alignItems: 'start' }}>
 
-                <CreateTaskModal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} />
+                    {/* SIDEBAR */}
+                    {(width > 1200) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', position: 'sticky', top: '40px' }}>
+                            {/* Calendar */}
+                            <div className="glass-clear" style={{
+                                padding: '16px',
+                                borderRadius: '24px',
+                                background: 'rgba(15, 23, 42, 0.4)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
+                                backdropFilter: 'blur(16px)'
+                            }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 4px' }}>
+                                    <button onClick={handlePrevMonth} style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', borderRadius: '50%', transition: 'background 0.2s' }}><ChevronLeft size={16} /></button>
+                                    <h3 style={{ color: 'white', fontSize: '0.95rem', fontWeight: '600', margin: 0, letterSpacing: '0.5px' }}>{format(viewDate, 'MMMM yyyy')}</h3>
+                                    <button onClick={handleNextMonth} style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', color: 'rgba(255,255,255,0.6)', borderRadius: '50%', transition: 'background 0.2s' }}><ChevronRight size={16} /></button>
+                                </div>
 
-                {/* Main Content Area */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: width < 1200 ? '1fr' : '300px 1fr',
-                    gap: isMobile ? '24px' : '32px',
-                    alignItems: 'start'
-                }}>
-                    {/* Filters Sidebar */}
-                    <div className="glass-clear" style={{
-                        padding: isMobile ? '16px' : '24px',
-                        position: width < 1200 ? 'static' : 'sticky',
-                        top: '100px',
-                        borderRadius: '24px'
-                    }}>
-                        <div style={{ marginBottom: isMobile ? '0' : '24px' }}>
-                            <h3 style={{
-                                fontSize: '0.9rem',
-                                fontWeight: '600',
-                                marginBottom: isMobile ? '12px' : '16px',
-                                color: 'rgba(255,255,255,0.6)',
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px'
-                            }}>
-                                Operations
-                            </h3>
-                            <div style={{
-                                display: 'flex',
-                                flexDirection: width < 1200 ? 'row' : 'column',
-                                gap: '8px',
-                                overflowX: width < 1200 ? 'auto' : 'visible',
-                                paddingBottom: width < 1200 ? '8px' : '0',
-                                scrollbarWidth: 'none'
-                            }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '12px' }}>
+                                    {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                                        <span key={i} style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: '700', textAlign: 'center' }}>{day}</span>
+                                    ))}
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '16px' }}>
+                                    {calendarGrid.map((day, i) => {
+                                        const isCurrentMonth = isSameMonth(day, viewDate);
+                                        const isStart = tempStart && isSameDay(day, tempStart);
+                                        const isEnd = tempEnd && isSameDay(day, tempEnd);
+                                        const isInRange = tempStart && tempEnd && isWithinInterval(day, {
+                                            start: tempStart < tempEnd ? tempStart : tempEnd,
+                                            end: tempStart < tempEnd ? tempEnd : tempStart
+                                        });
+                                        const dayTasks = tasks.filter(t => isSameDay(t.deadline, day));
+                                        const hasTasks = dayTasks.length > 0;
+
+                                        // Overdue check for dots
+                                        const hasOverdue = dayTasks.some(t => !t.completed && isPast(t.deadline));
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                onClick={() => handleTempDateClick(day)}
+                                                style={{
+                                                    aspectRatio: '1',
+                                                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                    cursor: 'pointer', borderRadius: '50%', fontSize: '0.75rem',
+                                                    fontWeight: (isStart || isEnd) ? '700' : '500',
+                                                    color: (isStart || isEnd) ? '#1e293b' : isInRange ? 'white' : isCurrentMonth ? 'white' : 'rgba(255,255,255,0.2)',
+                                                    background: (isStart || isEnd) ? 'white' : isInRange ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                    transition: 'all 0.2s', position: 'relative',
+                                                }}
+                                            >
+                                                <span style={{ position: 'relative', zIndex: 1 }}>{format(day, 'd')}</span>
+                                                {hasTasks && !isStart && !isEnd && (
+                                                    <div style={{
+                                                        width: '4px', height: '4px', borderRadius: '50%',
+                                                        background: hasOverdue ? '#f87171' : '#818cf8',
+                                                        position: 'absolute', bottom: '6px',
+                                                        opacity: isInRange ? 1 : 0.7
+                                                    }} />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <button onClick={applySelection} style={{
+                                    width: '100%', padding: '10px', borderRadius: '12px', border: 'none',
+                                    background: 'white', color: '#1e293b', fontSize: '0.8rem', fontWeight: '700',
+                                    cursor: 'pointer', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)',
+                                    transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.5px'
+                                }}
+                                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                                    onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                                >
+                                    Apply Filter
+                                </button>
+                            </div>
+
+                            {/* Filters List */}
+                            <div className="glass-clear" style={{ padding: '24px', borderRadius: '24px' }}>
+                                <h3 style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '16px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                    Quick Filters
+                                </h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    {filters.map(filter => (
+                                        <div
+                                            key={filter.id}
+                                            onClick={() => { setSelectedFilter(filter.id); setActiveRangeStart(null); setActiveRangeEnd(null); }}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                padding: '10px 14px', borderRadius: '12px', cursor: 'pointer',
+                                                background: selectedFilter === filter.id && !activeRangeStart ? 'rgba(255,255,255,0.15)' : 'transparent',
+                                                border: selectedFilter === filter.id && !activeRangeStart ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
+                                                transition: 'all 0.2s'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '0.9rem', color: selectedFilter === filter.id && !activeRangeStart ? 'white' : 'rgba(255,255,255,0.7)' }}>{filter.label}</span>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '12px' }}>{filter.count}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* MAIN CONTENT */}
+                    <div style={{ width: '100%', minWidth: 0 }}>
+                        {/* Header */}
+                        <div style={{
+                            display: 'flex', flexDirection: isMobile ? 'column' : 'row',
+                            justifyContent: 'space-between', alignItems: isMobile ? 'flex-start' : 'center',
+                            marginBottom: '32px', gap: '24px'
+                        }}>
+                            <div>
+                                <h1 style={{
+                                    fontSize: isMobile ? '2rem' : '3rem',
+                                    fontWeight: '700',
+                                    color: 'white',
+                                    marginBottom: '8px',
+                                    letterSpacing: '-1px',
+                                    lineHeight: 1
+                                }}>
+                                    Mission Board
+                                </h1>
+                                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1rem', maxWidth: '600px' }}>
+                                    {activeRangeStart ? (
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            Filtering: <span style={{ color: 'white', fontWeight: '600' }}>
+                                                {format(activeRangeStart, 'MMM do')} {activeRangeEnd ? `- ${format(activeRangeEnd, 'MMM do')}` : ''}
+                                            </span>
+                                            <button onClick={() => { setActiveRangeStart(null); setActiveRangeEnd(null); setSelectedFilter('all'); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}><Trash2 size={10} /></button>
+                                        </span>
+                                    ) : 'Coordinate operational objectives and execute tasks.'}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={onCreateTask}
+                                className="btn-shine"
+                                style={{
+                                    padding: '14px 28px', borderRadius: '100px',
+                                    background: 'white', color: 'black',
+                                    border: 'none', fontSize: '1rem', fontWeight: '600',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
+                                    boxShadow: '0 4px 24px rgba(255, 255, 255, 0.15)',
+                                    transition: 'transform 0.2s',
+                                    whiteSpace: 'nowrap'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                            >
+                                <Plus size={20} strokeWidth={2.5} /> Create Mission
+                            </button>
+                        </div>
+
+                        {/* Mobile Filters Horizontal Scroll */}
+                        {(width <= 1200) && (
+                            <div style={{ marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px', display: 'flex', gap: '8px' }}>
                                 {filters.map(filter => (
-                                    <div
+                                    <button
                                         key={filter.id}
                                         onClick={() => setSelectedFilter(filter.id)}
                                         style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            padding: '12px 14px',
-                                            borderRadius: '12px',
-                                            cursor: 'pointer',
-                                            background: selectedFilter === filter.id ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)',
-                                            border: selectedFilter === filter.id ? '1px solid rgba(255,255,255,0.2)' : '1px solid transparent',
-                                            transition: 'all 0.2s',
-                                            minWidth: width < 1200 ? 'max-content' : 'auto',
-                                            gap: '12px'
+                                            padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', whiteSpace: 'nowrap',
+                                            background: selectedFilter === filter.id ? 'white' : 'rgba(255,255,255,0.05)',
+                                            color: selectedFilter === filter.id ? 'black' : 'rgba(255,255,255,0.7)',
+                                            border: 'none', cursor: 'pointer', fontWeight: '500', transition: 'all 0.2s',
+                                            display: 'flex', alignItems: 'center', gap: '8px'
                                         }}
                                     >
-                                        <span style={{
-                                            fontSize: '0.9rem',
-                                            fontWeight: selectedFilter === filter.id ? '600' : '400',
-                                            color: 'white'
-                                        }}>
-                                            {filter.label}
-                                        </span>
-                                        <span style={{
-                                            fontSize: '0.75rem',
-                                            color: 'white',
-                                            fontWeight: '700',
-                                            background: 'rgba(255,255,255,0.1)',
-                                            padding: '2px 8px',
-                                            borderRadius: '99px'
-                                        }}>
-                                            {filter.count}
-                                        </span>
-                                    </div>
+                                        {filter.label} <span style={{ opacity: 0.6, fontSize: '0.8em' }}>{filter.count}</span>
+                                    </button>
                                 ))}
                             </div>
-                        </div>
-
-                        {!isMobile && (
-                            <>
-                                <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '24px 0' }} />
-
-                                <div style={{ marginBottom: '24px' }}>
-                                    <h3 style={{
-                                        fontSize: '0.9rem',
-                                        fontWeight: '600',
-                                        marginBottom: '16px',
-                                        color: 'rgba(255,255,255,0.6)',
-                                        textTransform: 'uppercase'
-                                    }}>Classification</h3>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {['High', 'Medium', 'Low'].map(priority => (
-                                            <div key={priority} style={{
-                                                display: 'flex', alignItems: 'center', gap: '10px',
-                                                color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', padding: '6px 4px'
-                                            }}>
-                                                <div style={{
-                                                    width: '8px', height: '8px', borderRadius: '50%',
-                                                    background: priority === 'High' ? '#f87171' : priority === 'Medium' ? '#fbbf24' : '#4ade80'
-                                                }} />
-                                                <span>{priority} Priority</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div style={{ height: '1px', background: 'rgba(255,255,255,0.1)', margin: '24px 0' }} />
-
-                                <div>
-                                    <h3 style={{ fontSize: '0.9rem', fontWeight: '600', marginBottom: '16px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>Tags</h3>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                                        {tags.length > 0 ? tags.map(tag => (
-                                            <span key={tag} style={{
-                                                fontSize: '0.75rem',
-                                                padding: '4px 10px',
-                                                borderRadius: '8px',
-                                                background: 'rgba(255,255,255,0.05)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
-                                                color: 'rgba(255,255,255,0.7)',
-                                                textTransform: 'capitalize',
-                                                cursor: 'pointer',
-                                                transition: 'all 0.2s'
-                                            }}
-                                                onMouseEnter={e => {
-                                                    e.currentTarget.style.background = 'rgba(255,255,255,0.15)';
-                                                    e.currentTarget.style.color = 'white';
-                                                }}
-                                                onMouseLeave={e => {
-                                                    e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                                                    e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
-                                                }}
-                                            >
-                                                #{tag}
-                                            </span>
-                                        )) : (
-                                            <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>No tags defined</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </>
                         )}
-                    </div>
 
-                    {/* Tasks List */}
-                    <div style={{ width: '100%', minWidth: 0 }}>
+                        {/* Task List Header + View Toggles */}
                         <div className="glass-clear" style={{
-                            padding: isMobile ? '12px' : '16px 20px',
-                            marginBottom: '20px',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
+                            padding: isMobile ? '12px' : '16px 24px', marginBottom: '24px',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                             borderRadius: '16px'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '4px', height: '16px', background: '#667eea', borderRadius: '2px' }} />
-                                <h3 style={{ fontSize: isMobile ? '0.95rem' : '1.1rem', fontWeight: '600', color: 'white' }}>
-                                    {selectedFilter === 'all' ? 'Active Objectives' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1)}
+                                <div style={{ width: '4px', height: '16px', background: '#4ade80', borderRadius: '2px' }} />
+                                <h3 style={{ fontSize: isMobile ? '0.95rem' : '1.1rem', fontWeight: '600', color: 'white', margin: 0 }}>
+                                    {activeRangeStart ? 'Date Filtered' : selectedFilter === 'all' ? 'Active Missions' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1)} ({filteredTasks.length})
                                 </h3>
                             </div>
 
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 {!isSmallPhone && (
-                                    <div className="flex items-center gap-xs" style={{ background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                                        <button
-                                            onClick={() => setViewMode('list')}
-                                            style={{
-                                                background: viewMode === 'list' ? 'rgba(255,255,255,0.15)' : 'transparent',
-                                                color: 'white', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex'
-                                            }}
-                                        >
-                                            <List size={18} />
-                                        </button>
-                                        <button
-                                            onClick={() => setViewMode('grid')}
-                                            style={{
-                                                background: viewMode === 'grid' ? 'rgba(255,255,255,0.15)' : 'transparent',
-                                                color: 'white', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex'
-                                            }}
-                                        >
-                                            <Grid size={18} />
-                                        </button>
+                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '10px', display: 'flex', gap: '4px' }}>
+                                        <button onClick={() => setViewMode('list')} style={{ background: viewMode === 'list' ? 'rgba(255,255,255,0.15)' : 'transparent', color: viewMode === 'list' ? 'white' : 'rgba(255,255,255,0.4)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}><List size={18} /></button>
+                                        <button onClick={() => setViewMode('grid')} style={{ background: viewMode === 'grid' ? 'rgba(255,255,255,0.15)' : 'transparent', color: viewMode === 'grid' ? 'white' : 'rgba(255,255,255,0.4)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}><Grid size={18} /></button>
                                     </div>
                                 )}
-                                <button style={{
-                                    background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.1)',
-                                    padding: '8px 12px', borderRadius: '10px', cursor: 'pointer', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '6px'
-                                }}>
-                                    <Filter size={14} />
-                                    {isMobile ? '' : 'Filter'}
-                                </button>
                             </div>
                         </div>
 
+                        {/* Grid/List Content */}
                         <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: viewMode === 'grid' && !isMobile
-                                ? 'repeat(auto-fill, minmax(280px, 1fr))'
-                                : '1fr',
+                            display: viewMode === 'grid' ? 'grid' : 'flex',
+                            flexDirection: 'column',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
                             gap: '16px'
                         }}>
-                            {loading ? (
-                                <div style={{ color: 'white', textAlign: 'center', padding: '60px 0', opacity: 0.7 }}>
-                                    <Clock size={40} className="rotate-infinite" style={{ marginBottom: '16px' }} />
-                                    <p style={{ letterSpacing: '2px', textTransform: 'uppercase', fontSize: '0.8rem' }}>Scanning Database...</p>
-                                </div>
-                            ) : filteredTasks.length === 0 ? (
-                                <div className="glass-clear" style={{
-                                    color: 'rgba(255,255,255,0.4)', textAlign: 'center', padding: '80px 40px',
-                                    borderRadius: '24px', border: '1px dashed rgba(255,255,255,0.1)'
-                                }}>
-                                    <Clock size={32} style={{ marginBottom: '16px', opacity: 0.3 }} />
-                                    <p style={{ fontSize: '1rem', fontWeight: '500', color: 'rgba(255,255,255,0.6)' }}>Zero Objectives Located</p>
-                                    <p style={{ fontSize: '0.85rem', marginTop: '4px', marginBottom: '24px' }}>Awaiting new mission parameters.</p>
-                                    <button className="btn" onClick={() => setShowCreateModal(true)} style={{
-                                        background: 'rgba(255,255,255,0.1)',
-                                        color: 'white',
-                                        border: '1px solid rgba(255,255,255,0.2)',
-                                        borderRadius: '12px',
-                                        padding: '8px 24px'
-                                    }}>
-                                        Create New Mission
-                                    </button>
+                            {filteredTasks.length === 0 ? (
+                                <div style={{ gridColumn: '1/-1', padding: '80px 0', textAlign: 'center', color: 'rgba(255,255,255,0.4)', border: '2px dashed rgba(255,255,255,0.05)', borderRadius: '24px' }}>
+                                    <Filter size={32} style={{ marginBottom: '16px', opacity: 0.5 }} />
+                                    <p>No missions found matching current criteria.</p>
                                 </div>
                             ) : (
                                 filteredTasks.map(renderTaskCard)
                             )}
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>

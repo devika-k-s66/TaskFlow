@@ -11,15 +11,24 @@
     height: 400px;
     /* Reduced from 500px */
     margin: 0 auto;
-    background: rgba(255, 255, 255, 0.03);
+    /* The "Highlight" Glow Background */
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
     backdrop-filter: blur(20px);
     border-radius: 40px;
     overflow: hidden;
     display: flex;
     align-items: center;
     padding: 0 60px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.08), 0 0 50px rgba(255, 255, 255, 0.03);
+    /* Outer glow */
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hero-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0 40px rgba(255, 255, 255, 0.12), 0 0 80px rgba(255, 255, 255, 0.06);
+    /* Stronger glow on hover */
 }
 
 .hero-background-text {
@@ -29,14 +38,17 @@
     transform: translateY(-50%);
     font-size: 10rem;
     font-weight: 900;
-    color: rgba(255, 255, 255, 0.95);
+    /* Pure White Visible Text */
+    color: #FFFFFF;
     letter-spacing: -8px;
     pointer-events: none;
     line-height: 1;
     white-space: nowrap;
     z-index: 1;
     margin: 0;
-    text-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.15);
+    /* Reduced glow */
+    opacity: 1;
 }
 
 .hero-navbar-wrapper {
@@ -116,7 +128,8 @@
     left: 40px;
     width: 380px;
     z-index: 5;
-    filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.25));
+    filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.3));
+    /* White glow around character */
 }
 
 .hero-character-img {

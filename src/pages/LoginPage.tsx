@@ -25,20 +25,48 @@ export default function LoginPage() {
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'var(--bg-main)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '20px'
+            padding: '20px',
+            position: 'relative',
+            overflow: 'hidden'
         }}>
+            {/* Ambient Background Effect */}
+            <div style={{
+                position: 'absolute',
+                top: '-10%',
+                left: '-10%',
+                width: '40%',
+                height: '40%',
+                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.05) 0%, transparent 70%)',
+                borderRadius: '50%',
+                filter: 'blur(80px)',
+                zIndex: 0
+            }}></div>
+            <div style={{
+                position: 'absolute',
+                bottom: '-10%',
+                right: '-10%',
+                width: '40%',
+                height: '40%',
+                background: 'radial-gradient(circle, rgba(255, 255, 255, 0.03) 0%, transparent 70%)',
+                borderRadius: '50%',
+                filter: 'blur(80px)',
+                zIndex: 0
+            }}></div>
             <div style={{
                 maxWidth: '480px',
                 width: '100%',
-                background: 'rgba(255, 255, 255, 0.95)',
+                background: 'var(--bg-card)',
                 backdropFilter: 'blur(20px)',
                 borderRadius: '24px',
                 padding: '48px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+                border: '1px solid var(--border-color)',
+                position: 'relative',
+                zIndex: 1
             }}>
                 {/* Logo */}
                 <div className="flex justify-center mb-lg">
@@ -46,13 +74,14 @@ export default function LoginPage() {
                         width: '64px',
                         height: '64px',
                         borderRadius: '16px',
-                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        background: 'linear-gradient(135deg, var(--primary), var(--primary-light))',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        color: 'white'
+                        color: 'black',
+                        boxShadow: '0 0 20px rgba(255, 255, 255, 0.2)'
                     }}>
-                        <Zap size={36} />
+                        <Zap size={36} fill="black" />
                     </div>
                 </div>
 
@@ -99,6 +128,7 @@ export default function LoginPage() {
                         borderRadius: '12px',
                         border: '1px solid var(--border-color)',
                         background: 'white',
+                        color: 'black',
                         fontSize: '1rem',
                         fontWeight: '600',
                         display: 'flex',
@@ -106,14 +136,14 @@ export default function LoginPage() {
                         justifyContent: 'center',
                         gap: '12px',
                         cursor: loading ? 'not-allowed' : 'pointer',
-                        transition: 'all 0.2s',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         marginBottom: '16px'
                     }}
                     onMouseEnter={(e) => {
                         if (!loading) {
-                            e.currentTarget.style.background = 'var(--bg-main)';
+                            e.currentTarget.style.background = '#f0f0f0';
                             e.currentTarget.style.transform = 'translateY(-2px)';
-                            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                            e.currentTarget.style.boxShadow = '0 10px 20px rgba(0,0,0,0.2)';
                         }
                     }}
                     onMouseLeave={(e) => {
@@ -168,17 +198,18 @@ export default function LoginPage() {
                         padding: '16px',
                         borderRadius: '12px',
                         border: '1px solid var(--border-color)',
-                        background: 'white',
+                        background: 'transparent',
+                        color: 'var(--text-muted)',
                         fontSize: '1rem',
                         fontWeight: '600',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '12px',
-                        cursor: 'pointer',
+                        cursor: 'not-allowed',
                         transition: 'all 0.2s',
                         marginBottom: '24px',
-                        opacity: 0.5
+                        opacity: 0.4
                     }}
                     disabled
                 >

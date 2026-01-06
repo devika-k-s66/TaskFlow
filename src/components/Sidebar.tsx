@@ -17,11 +17,11 @@ import {
 const navItems = [
     { path: '/dashboard/', label: 'Dashboard', icon: LayoutDashboard },
     { path: '/dashboard/tasks', label: 'Tasks', icon: CheckSquare },
+    { path: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
+    { path: '/dashboard/templates', label: 'Time Templates', icon: Library },
     { path: '/dashboard/automations', label: 'Automations', icon: Zap },
     { path: '/dashboard/routines', label: 'Smart Routines', icon: Repeat },
-    { path: '/dashboard/templates', label: 'Time Templates', icon: Library },
     { path: '/dashboard/reminders', label: 'Reminders', icon: Bell },
-    { path: '/dashboard/calendar', label: 'Calendar', icon: Calendar },
     { path: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
     { path: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];

@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Plus, Clock, MoreVertical, Filter, Grid, List, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useLocation, useOutletContext } from 'react-router-dom';
+import { Plus, Clock, MoreVertical, Filter, Trash2, ChevronLeft, ChevronRight, Check, Edit3 } from 'lucide-react';
+import { useLocation, useOutletContext, useNavigate } from 'react-router-dom';
 import { useTasks } from '../hooks/useFirestore';
 import { format, isToday, isPast, isSameDay, isWithinInterval, startOfDay, endOfDay, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, addMonths, subMonths, isSameMonth } from 'date-fns';
 import type { Task } from '../types';
 
 export default function TasksPage() {
-    const { tasks, loading, updateTask, deleteTask } = useTasks();
+    const { tasks, updateTask, deleteTask } = useTasks();
     const location = useLocation();
+    const navigate = useNavigate();
     const { onCreateTask } = useOutletContext<{ onCreateTask: () => void }>();
-    const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
     const [selectedFilter, setSelectedFilter] = useState(location.state?.filter || 'all');
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [activeMenu, setActiveMenu] = useState<string | null>(null);
+    const [optimisticTasks, setOptimisticTasks] = useState<Record<string, boolean>>({});
     const [width, setWidth] = useState(window.innerWidth);
 
     // Calendar State
@@ -61,7 +64,6 @@ export default function TasksPage() {
     }, []);
 
     const isMobile = width < 768;
-    const isTablet = width >= 768 && width < 1200;
     const isSmallPhone = width < 480;
 
     // Derived State for Filters
@@ -123,152 +125,238 @@ export default function TasksPage() {
         { id: 'high', label: 'High Priority', count: tasks.filter(t => t.priority === 'High').length },
     ];
 
-    const tags = Array.from(new Set(tasks.flatMap(t => t.tags)));
+    const renderTaskCard = (task: Task) => {
+        const isCompleted = optimisticTasks[task.id] !== undefined ? optimisticTasks[task.id] : task.completed;
+        const isOverdue = !isCompleted && isPast(task.deadline);
 
-    const renderTaskCard = (task: Task) => (
-        <div
-            key={task.id}
-            className="glass-clear"
-            style={{
-                padding: isSmallPhone ? '12px' : isMobile ? '16px' : '20px',
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                cursor: 'pointer',
-                marginBottom: viewMode === 'list' ? '12px' : '0',
-                border: '1px solid rgba(255,255,255,0.1)',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                height: viewMode === 'grid' ? '100%' : 'auto'
-            }}
-            onMouseEnter={(e) => {
-                if (!isMobile) {
-                    e.currentTarget.style.transform = 'scale(1.01) translateY(-2px)';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
-                }
-            }}
-            onMouseLeave={(e) => {
-                if (!isMobile) {
-                    e.currentTarget.style.transform = 'scale(1) translateY(0)';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%)';
-                }
-            }}
-        >
-            <div style={{ display: 'flex', gap: isSmallPhone ? '8px' : '12px', alignItems: 'flex-start' }}>
-                <div
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        updateTask(task.id, { completed: !task.completed });
-                    }}
-                    style={{
-                        width: isSmallPhone ? '20px' : '24px',
-                        height: isSmallPhone ? '20px' : '24px',
-                        borderRadius: '6px',
-                        border: '2px solid rgba(255,255,255,0.5)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer',
-                        background: task.completed ? 'rgba(255,255,255,0.5)' : 'transparent',
-                        flexShrink: 0,
-                        marginTop: '4px'
-                    }}
-                >
-                    {task.completed && <div style={{ width: isSmallPhone ? '10px' : '14px', height: isSmallPhone ? '10px' : '14px', background: 'white', borderRadius: '2px' }} />}
-                </div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                        <h4 style={{
-                            fontSize: isSmallPhone ? '0.95rem' : '1.05rem',
-                            fontWeight: '600',
-                            textDecoration: task.completed ? 'line-through' : 'none',
-                            color: task.completed ? 'rgba(255,255,255,0.5)' : 'white',
-                            margin: 0,
-                            lineHeight: '1.3',
-                            wordBreak: 'break-word'
-                        }}>
-                            {task.title}
-                        </h4>
-                        <span className="badge" style={{
-                            background: task.priority === 'High' ? 'rgba(255, 59, 48, 0.2)' : task.priority === 'Medium' ? 'rgba(255, 149, 0, 0.2)' : 'rgba(52, 199, 89, 0.2)',
-                            color: task.priority === 'High' ? '#f87171' : task.priority === 'Medium' ? '#fbbf24' : '#4ade80',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            fontSize: '0.65rem',
-                            padding: '2px 8px',
-                            flexShrink: 0,
-                            height: 'max-content'
-                        }}>
-                            {task.priority}
-                        </span>
-                    </div>
-
-                    {task.description && (
-                        <p style={{
-                            fontSize: '0.85rem',
-                            color: 'rgba(255,255,255,0.6)',
-                            margin: '8px 0',
-                            lineHeight: '1.4',
-                            display: '-webkit-box',
-                            WebkitLineClamp: isMobile && viewMode === 'grid' ? 2 : 3,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden'
-                        }}>
-                            {task.description}
-                        </p>
-                    )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                        <span className="flex items-center gap-xs" style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)' }}>
-                            <Clock size={12} />
-                            {format(task.deadline, 'MMM d, h:mm a')}
-                            {task.endTime && ` - ${format(task.endTime, 'h:mm a')}`}
-                        </span>
-                        {task.tags.slice(0, 2).map(tag => (
-                            <span key={tag} className="badge" style={{
-                                background: 'rgba(255,255,255,0.08)',
-                                color: 'rgba(255,255,255,0.7)',
-                                border: '1px solid rgba(255,255,255,0.05)',
-                                fontSize: '0.65rem',
-                                padding: '1px 6px'
-                            }}>
-                                {tag}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            <div style={{
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'center',
-                justifyContent: 'flex-end',
-                marginTop: '16px',
-                paddingTop: '12px',
-                borderTop: '1px solid rgba(255,255,255,0.05)'
-            }}>
-                <button className="btn btn-sm btn-ghost" onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.6)',
-                    width: '32px', height: '32px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: 0, borderRadius: '8px', transition: 'all 0.2s', border: '1px solid rgba(255,255,255,0.05)'
+        return (
+            <div
+                key={task.id}
+                className="glass-clear"
+                style={{
+                    padding: isSmallPhone ? '12px' : isMobile ? '16px' : '20px',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    cursor: 'pointer',
+                    border: `1px solid ${isOverdue ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.1)'}`,
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: '100%',
+                    boxShadow: isOverdue ? '0 0 15px rgba(239, 68, 68, 0.1)' : 'none'
                 }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f87171'; e.currentTarget.style.color = 'white'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
-                >
-                    <Trash2 size={14} />
-                </button>
-                <button className="btn btn-sm btn-ghost" style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    color: 'rgba(255,255,255,0.6)',
-                    width: '32px', height: '32px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: 0, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)'
+                onMouseEnter={(e) => {
+                    if (!isMobile) {
+                        e.currentTarget.style.transform = 'scale(1.01) translateY(-2px)';
+                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)';
+                    }
+                }}
+                onMouseLeave={(e) => {
+                    if (!isMobile) {
+                        e.currentTarget.style.transform = 'scale(1) translateY(0)';
+                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%)';
+                    }
+                }}
+            >
+                <div style={{ display: 'flex', gap: isSmallPhone ? '8px' : '12px', alignItems: 'flex-start' }}>
+                    <div
+                        onClick={async (e) => {
+                            e.stopPropagation();
+                            const newStatus = !isCompleted;
+                            setOptimisticTasks(prev => ({ ...prev, [task.id]: newStatus }));
+                            try {
+                                await updateTask(task.id, { completed: newStatus });
+                            } catch (err) {
+                                setOptimisticTasks(prev => {
+                                    const next = { ...prev };
+                                    delete next[task.id];
+                                    return next;
+                                });
+                            }
+                        }}
+                        style={{
+                            width: isSmallPhone ? '20px' : '24px',
+                            height: isSmallPhone ? '20px' : '24px',
+                            borderRadius: '50%',
+                            border: `2px solid ${isCompleted ? '#4ade80' : 'rgba(255,255,255,0.5)'}`,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer',
+                            background: isCompleted ? 'rgba(74, 222, 128, 0.1)' : 'transparent',
+                            flexShrink: 0,
+                            marginTop: '4px',
+                            transition: 'all 0.2s'
+                        }}
+                    >
+                        {isCompleted && <Check size={isSmallPhone ? 12 : 16} color="#4ade80" strokeWidth={3} />}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                            <h4 style={{
+                                fontSize: isSmallPhone ? '0.95rem' : '1.05rem',
+                                fontWeight: '600',
+                                color: isCompleted ? '#4ade80' : 'white',
+                                margin: 0,
+                                lineHeight: '1.3',
+                                wordBreak: 'break-word'
+                            }}>
+                                {task.title}
+                            </h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                                <span className="badge" style={{
+                                    background: task.priority === 'High' ? 'rgba(255, 59, 48, 0.2)' : task.priority === 'Medium' ? 'rgba(255, 149, 0, 0.2)' : 'rgba(52, 199, 89, 0.2)',
+                                    color: task.priority === 'High' ? '#f87171' : task.priority === 'Medium' ? '#fbbf24' : '#4ade80',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    fontSize: '0.65rem',
+                                    padding: '2px 8px',
+                                    flexShrink: 0,
+                                    height: 'max-content'
+                                }}>
+                                    {task.priority}
+                                </span>
+                                {isOverdue && (
+                                    <span style={{ color: '#ef4444', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase' }}>Overdue</span>
+                                )}
+                            </div>
+                        </div>
+
+                        {task.description && (
+                            <p style={{
+                                fontSize: '0.85rem',
+                                color: 'rgba(255,255,255,0.6)',
+                                margin: '8px 0',
+                                lineHeight: '1.4',
+                                display: '-webkit-box',
+                                WebkitLineClamp: isMobile ? 2 : 3,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                            }}>
+                                {task.description}
+                            </p>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                            <span className="flex items-center gap-xs" style={{ fontSize: '0.7rem', color: isOverdue ? '#ef4444' : 'rgba(255,255,255,0.5)' }}>
+                                <Clock size={12} />
+                                {format(task.deadline, 'MMM d, h:mm a')}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    marginTop: '16px',
+                    paddingTop: '12px',
+                    borderTop: '1px solid rgba(255,255,255,0.05)'
                 }}>
-                    <MoreVertical size={14} />
-                </button>
+                    <button
+                        className="btn btn-sm btn-ghost"
+                        onClick={(e) => { e.stopPropagation(); navigate('/dashboard/calendar', { state: { editTask: task } }); }}
+                        style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            color: 'rgba(255,255,255,0.6)',
+                            width: '32px', height: '32px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 0, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'white'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
+                    >
+                        <Edit3 size={14} />
+                    </button>
+
+                    <button
+                        className="btn btn-sm btn-ghost"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Delete this mission?')) deleteTask(task.id);
+                        }}
+                        style={{
+                            background: 'rgba(255,255,255,0.05)',
+                            color: 'rgba(255,255,255,0.6)',
+                            width: '32px', height: '32px',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: 0, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; e.currentTarget.style.color = '#ef4444'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
+                    >
+                        <Trash2 size={14} />
+                    </button>
+
+                    <div style={{ position: 'relative' }}>
+                        <button
+                            className="btn btn-sm btn-ghost"
+                            onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === task.id ? null : task.id); }}
+                            style={{
+                                background: 'rgba(255,255,255,0.05)',
+                                color: 'rgba(255,255,255,0.6)',
+                                width: '32px', height: '32px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                padding: 0, borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = 'white'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)'; }}
+                        >
+                            <MoreVertical size={14} />
+                        </button>
+
+                        {activeMenu === task.id && (
+                            <>
+                                <div
+                                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }}
+                                    onClick={(e) => { e.stopPropagation(); setActiveMenu(null); }}
+                                />
+                                <div style={{
+                                    position: 'absolute',
+                                    bottom: '100%',
+                                    right: 0,
+                                    marginBottom: '8px',
+                                    background: 'rgba(15, 23, 42, 0.95)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '12px',
+                                    padding: '6px',
+                                    width: '140px',
+                                    zIndex: 100,
+                                    boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
+                                    backdropFilter: 'blur(10px)'
+                                }}>
+                                    <button
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const newStatus = !isCompleted;
+                                            setOptimisticTasks(prev => ({ ...prev, [task.id]: newStatus }));
+                                            setActiveMenu(null);
+                                            try {
+                                                await updateTask(task.id, { completed: newStatus });
+                                            } catch (err) {
+                                                setOptimisticTasks(prev => {
+                                                    const next = { ...prev };
+                                                    delete next[task.id];
+                                                    return next;
+                                                });
+                                            }
+                                        }}
+                                        style={{ width: '100%', padding: '8px 12px', textAlign: 'left', background: 'none', border: 'none', color: 'white', fontSize: '0.8rem', cursor: 'pointer', borderRadius: '8px' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                                    >
+                                        {isCompleted ? 'Mark Pending' : 'Mark Complete'}
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
             </div>
-        </div>
-    );
+        );
+    };
 
     return (
         <div className="page-content fade-in" style={{ padding: 0 }}>
@@ -316,8 +404,6 @@ export default function TasksPage() {
                                         });
                                         const dayTasks = tasks.filter(t => isSameDay(t.deadline, day));
                                         const hasTasks = dayTasks.length > 0;
-
-                                        // Overdue check for dots
                                         const hasOverdue = dayTasks.some(t => !t.completed && isPast(t.deadline));
 
                                         return (
@@ -361,30 +447,7 @@ export default function TasksPage() {
                                 </button>
                             </div>
 
-                            {/* Filters List */}
-                            <div className="glass-clear" style={{ padding: '24px', borderRadius: '24px' }}>
-                                <h3 style={{ fontSize: '0.85rem', fontWeight: '700', marginBottom: '16px', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                    Quick Filters
-                                </h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                    {filters.map(filter => (
-                                        <div
-                                            key={filter.id}
-                                            onClick={() => { setSelectedFilter(filter.id); setActiveRangeStart(null); setActiveRangeEnd(null); }}
-                                            style={{
-                                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                                                padding: '10px 14px', borderRadius: '12px', cursor: 'pointer',
-                                                background: selectedFilter === filter.id && !activeRangeStart ? 'rgba(255,255,255,0.15)' : 'transparent',
-                                                border: selectedFilter === filter.id && !activeRangeStart ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent',
-                                                transition: 'all 0.2s'
-                                            }}
-                                        >
-                                            <span style={{ fontSize: '0.9rem', color: selectedFilter === filter.id && !activeRangeStart ? 'white' : 'rgba(255,255,255,0.7)' }}>{filter.label}</span>
-                                            <span style={{ fontSize: '0.75rem', fontWeight: '700', color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '12px' }}>{filter.count}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+
                         </div>
                     )}
 
@@ -398,11 +461,11 @@ export default function TasksPage() {
                         }}>
                             <div>
                                 <h1 style={{
-                                    fontSize: isMobile ? '2rem' : '3rem',
-                                    fontWeight: '700',
+                                    fontSize: isMobile ? '2.5rem' : '3.5rem',
+                                    fontWeight: '800',
                                     color: 'white',
                                     marginBottom: '8px',
-                                    letterSpacing: '-1px',
+                                    letterSpacing: '-1.5px',
                                     lineHeight: 1
                                 }}>
                                     Mission Board
@@ -413,7 +476,7 @@ export default function TasksPage() {
                                             Filtering: <span style={{ color: 'white', fontWeight: '600' }}>
                                                 {format(activeRangeStart, 'MMM do')} {activeRangeEnd ? `- ${format(activeRangeEnd, 'MMM do')}` : ''}
                                             </span>
-                                            <button onClick={() => { setActiveRangeStart(null); setActiveRangeEnd(null); setSelectedFilter('all'); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '20px', height: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}><Trash2 size={10} /></button>
+                                            <button onClick={() => { setActiveRangeStart(null); setActiveRangeEnd(null); setSelectedFilter('all'); }} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.6)' }}><Trash2 size={12} /></button>
                                         </span>
                                     ) : 'Coordinate operational objectives and execute tasks.'}
                                 </p>
@@ -423,83 +486,125 @@ export default function TasksPage() {
                                 onClick={onCreateTask}
                                 className="btn-shine"
                                 style={{
-                                    padding: '14px 28px', borderRadius: '100px',
+                                    padding: '16px 32px', borderRadius: '100px',
                                     background: 'white', color: 'black',
-                                    border: 'none', fontSize: '1rem', fontWeight: '600',
-                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                                    boxShadow: '0 4px 24px rgba(255, 255, 255, 0.15)',
+                                    border: 'none', fontSize: '1.05rem', fontWeight: '700',
+                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
+                                    boxShadow: '0 8px 32px rgba(255, 255, 255, 0.2)',
                                     transition: 'transform 0.2s',
                                     whiteSpace: 'nowrap'
                                 }}
-                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.02)'}
-                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
                             >
-                                <Plus size={20} strokeWidth={2.5} /> Create Mission
+                                <Plus size={20} strokeWidth={3} /> Create Mission
                             </button>
                         </div>
 
-                        {/* Mobile Filters Horizontal Scroll */}
-                        {(width <= 1200) && (
-                            <div style={{ marginBottom: '24px', overflowX: 'auto', paddingBottom: '8px', display: 'flex', gap: '8px' }}>
-                                {filters.map(filter => (
-                                    <button
-                                        key={filter.id}
-                                        onClick={() => setSelectedFilter(filter.id)}
-                                        style={{
-                                            padding: '8px 16px', borderRadius: '20px', fontSize: '0.9rem', whiteSpace: 'nowrap',
-                                            background: selectedFilter === filter.id ? 'white' : 'rgba(255,255,255,0.05)',
-                                            color: selectedFilter === filter.id ? 'black' : 'rgba(255,255,255,0.7)',
-                                            border: 'none', cursor: 'pointer', fontWeight: '500', transition: 'all 0.2s',
-                                            display: 'flex', alignItems: 'center', gap: '8px'
-                                        }}
-                                    >
-                                        {filter.label} <span style={{ opacity: 0.6, fontSize: '0.8em' }}>{filter.count}</span>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Task List Header + View Toggles */}
                         <div className="glass-clear" style={{
-                            padding: isMobile ? '12px' : '16px 24px', marginBottom: '24px',
+                            padding: isMobile ? '12px' : '18px 26px', marginBottom: '28px',
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            borderRadius: '16px'
+                            borderRadius: '20px', position: 'relative', zIndex: 50
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <div style={{ width: '4px', height: '16px', background: '#4ade80', borderRadius: '2px' }} />
-                                <h3 style={{ fontSize: isMobile ? '0.95rem' : '1.1rem', fontWeight: '600', color: 'white', margin: 0 }}>
+                                <div style={{ width: '4px', height: '20px', background: '#4ade80', borderRadius: '2px' }} />
+                                <h3 style={{ fontSize: isMobile ? '1rem' : '1.2rem', fontWeight: '700', color: 'white', margin: 0 }}>
                                     {activeRangeStart ? 'Date Filtered' : selectedFilter === 'all' ? 'Active Missions' : selectedFilter.charAt(0).toUpperCase() + selectedFilter.slice(1)} ({filteredTasks.length})
                                 </h3>
                             </div>
 
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                {!isSmallPhone && (
-                                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '10px', display: 'flex', gap: '4px' }}>
-                                        <button onClick={() => setViewMode('list')} style={{ background: viewMode === 'list' ? 'rgba(255,255,255,0.15)' : 'transparent', color: viewMode === 'list' ? 'white' : 'rgba(255,255,255,0.4)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}><List size={18} /></button>
-                                        <button onClick={() => setViewMode('grid')} style={{ background: viewMode === 'grid' ? 'rgba(255,255,255,0.15)' : 'transparent', color: viewMode === 'grid' ? 'white' : 'rgba(255,255,255,0.4)', border: 'none', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}><Grid size={18} /></button>
-                                    </div>
-                                )}
+                                <div style={{ position: 'relative' }}>
+                                    <button
+                                        onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                                        style={{
+                                            background: 'rgba(255,255,255,0.06)',
+                                            border: '1px solid rgba(255,255,255,0.12)',
+                                            color: 'white',
+                                            padding: '10px 20px',
+                                            borderRadius: '100px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            cursor: 'pointer',
+                                            fontSize: '0.95rem',
+                                            fontWeight: '700',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        <Filter size={18} />
+                                        <span>Filter</span>
+                                    </button>
+
+                                    {showFilterDropdown && (
+                                        <>
+                                            <div
+                                                style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }}
+                                                onClick={() => setShowFilterDropdown(false)}
+                                            />
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: '100%',
+                                                right: 0,
+                                                marginTop: '10px',
+                                                background: 'rgba(13, 14, 18, 0.98)',
+                                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                                borderRadius: '18px',
+                                                padding: '10px',
+                                                width: '220px',
+                                                zIndex: 100,
+                                                boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
+                                                backdropFilter: 'blur(30px)',
+                                                animation: 'fadeIn 0.2s ease-out'
+                                            }}>
+                                                {filters.map(filter => (
+                                                    <div
+                                                        key={filter.id}
+                                                        onClick={() => {
+                                                            setSelectedFilter(filter.id);
+                                                            setActiveRangeStart(null);
+                                                            setActiveRangeEnd(null);
+                                                            setShowFilterDropdown(false);
+                                                        }}
+                                                        style={{
+                                                            padding: '12px 16px',
+                                                            borderRadius: '12px',
+                                                            cursor: 'pointer',
+                                                            background: selectedFilter === filter.id ? 'rgba(255,255,255,0.1)' : 'transparent',
+                                                            color: selectedFilter === filter.id ? 'white' : 'rgba(255,255,255,0.6)',
+                                                            fontSize: '0.9rem',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center',
+                                                            transition: 'all 0.2s',
+                                                            fontWeight: '600'
+                                                        }}
+                                                    >
+                                                        <span>{filter.label}</span>
+                                                        <span style={{ fontSize: '0.8rem', opacity: 0.5, background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '6px' }}>{filter.count}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
-                        {/* Grid/List Content */}
                         <div style={{
-                            display: viewMode === 'grid' ? 'grid' : 'flex',
-                            flexDirection: 'column',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                            gap: '16px'
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                            gap: '20px'
                         }}>
                             {filteredTasks.length === 0 ? (
-                                <div style={{ gridColumn: '1/-1', padding: '80px 0', textAlign: 'center', color: 'rgba(255,255,255,0.4)', border: '2px dashed rgba(255,255,255,0.05)', borderRadius: '24px' }}>
-                                    <Filter size={32} style={{ marginBottom: '16px', opacity: 0.5 }} />
-                                    <p>No missions found matching current criteria.</p>
+                                <div style={{ gridColumn: '1/-1', padding: '100px 0', textAlign: 'center', color: 'rgba(255,255,255,0.3)', border: '2px dashed rgba(255,255,255,0.06)', borderRadius: '28px' }}>
+                                    <Filter size={40} style={{ marginBottom: '20px', opacity: 0.3 }} />
+                                    <h3 style={{ fontSize: '1.2rem', fontWeight: '600', color: 'rgba(255,255,255,0.5)', margin: 0 }}>No missions detected</h3>
+                                    <p style={{ fontSize: '0.9rem', marginTop: '8px' }}>Adjust your filters to scan more sectors.</p>
                                 </div>
                             ) : (
                                 filteredTasks.map(renderTaskCard)
                             )}
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>

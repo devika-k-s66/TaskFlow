@@ -1863,31 +1863,59 @@ function PlanningPageView({
             {previewingTemplate && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                    background: 'rgba(0,0,0,0.8)', zIndex: 5000,
+                    background: 'rgba(5, 5, 5, 0.8)', zIndex: 5000,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    padding: '20px', backdropFilter: 'blur(8px)',
+                    padding: '16px', backdropFilter: 'blur(10px)',
                     animation: 'fadeIn 0.2s ease-out'
                 }} onClick={() => setPreviewingTemplate(null)}>
                     <div className="glass-card" style={{
-                        maxWidth: '500px', width: '100%', maxHeight: '80vh',
+                        maxWidth: '460px', width: '100%', maxHeight: '80vh',
                         display: 'flex', flexDirection: 'column',
-                        background: 'rgba(15, 23, 42, 0.95)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        padding: isMobile ? '20px' : '30px',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+                        background: 'rgba(13, 14, 18, 0.98)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        padding: '24px',
+                        boxShadow: '0 40px 100px -20px rgba(0, 0, 0, 0.8)',
+                        borderRadius: '24px'
                     }} onClick={e => e.stopPropagation()}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <Library size={24} color="#fbbf24" />
-                                <h3 style={{ margin: 0, fontSize: isMobile ? '1.1rem' : '1.25rem', fontWeight: '900', color: 'white' }}>{previewingTemplate.name}</h3>
+                                <div style={{
+                                    width: '28px',
+                                    height: '28px',
+                                    background: 'linear-gradient(135deg, #fbbf24, #d97706)',
+                                    borderRadius: '8px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}>
+                                    <Library size={16} color="white" />
+                                </div>
+                                <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800', color: 'white', letterSpacing: '-0.5px' }}>
+                                    {previewingTemplate.name}
+                                </h3>
                             </div>
-                            <button onClick={() => setPreviewingTemplate(null)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex' }}>
+                            <button onClick={() => setPreviewingTemplate(null)} style={{
+                                background: 'rgba(255,255,255,0.06)',
+                                border: 'none',
+                                color: 'rgba(255,255,255,0.6)',
+                                cursor: 'pointer',
+                                padding: '8px',
+                                borderRadius: '10px',
+                                display: 'flex'
+                            }}>
                                 <X size={20} />
                             </button>
                         </div>
 
-                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '8px', marginBottom: '24px' }}>
-                            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px', marginBottom: '24px' }}>
+                            <div style={{
+                                fontSize: '0.75rem',
+                                color: 'rgba(255, 255, 255, 0.4)',
+                                fontWeight: '700',
+                                textTransform: 'uppercase',
+                                letterSpacing: '1px',
+                                marginBottom: '2px'
+                            }}>
                                 {previewingTemplate.slots.length} Tasks in this template
                             </div>
                             {previewingTemplate.slots.map((slot: TimeSlot, idx: number) => {
@@ -1895,9 +1923,9 @@ function PlanningPageView({
                                 return (
                                     <div key={idx} style={{
                                         padding: '16px',
-                                        background: 'rgba(255,255,255,0.05)',
+                                        background: 'rgba(255,255,255,0.02)',
                                         borderRadius: '16px',
-                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        border: '1px solid rgba(255,255,255,0.05)',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         gap: '8px',
@@ -1908,7 +1936,8 @@ function PlanningPageView({
                                                 <input
                                                     value={title}
                                                     onChange={e => setTitle(e.target.value)}
-                                                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '6px 10px', borderRadius: '6px', fontSize: '0.9rem' }}
+                                                    placeholder="Task title"
+                                                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '10px 14px', borderRadius: '10px', fontSize: '0.9rem', fontWeight: '600' }}
                                                 />
                                                 <div style={{ display: 'flex', gap: '8px' }}>
                                                     <input
@@ -1918,13 +1947,13 @@ function PlanningPageView({
                                                             const [h, m] = e.target.value.split(':').map(Number);
                                                             setStartTime(setHours(setMinutes(startOfDay(new Date()), m), h));
                                                         }}
-                                                        style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem' }}
+                                                        style={{ flex: 1, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: '10px', fontSize: '0.85rem' }}
                                                     />
                                                     <input
                                                         type="number"
                                                         value={duration}
                                                         onChange={e => setDuration(parseInt(e.target.value) || 0)}
-                                                        style={{ width: '80px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: 'white', padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem' }}
+                                                        style={{ width: '80px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '8px 12px', borderRadius: '10px', fontSize: '0.85rem' }}
                                                     />
                                                 </div>
                                                 <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
@@ -1944,13 +1973,13 @@ function PlanningPageView({
                                                             setTitle('');
                                                             setStartTime(null);
                                                         }}
-                                                        style={{ flex: 1, background: '#10b981', border: 'none', color: 'white', padding: '6px', borderRadius: '6px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                        style={{ flex: 1, background: 'var(--success)', border: 'none', color: 'white', padding: '10px', borderRadius: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
                                                     >
-                                                        Save Slot
+                                                        Save
                                                     </button>
                                                     <button
                                                         onClick={() => { setEditingTaskId(null); setTitle(''); }}
-                                                        style={{ flex: 1, background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px', borderRadius: '6px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                        style={{ flex: 1, background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', padding: '10px', borderRadius: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
                                                     >
                                                         Cancel
                                                     </button>
@@ -1958,11 +1987,12 @@ function PlanningPageView({
                                             </div>
                                         ) : (
                                             <>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                    <div style={{ fontWeight: '800', color: 'white', fontSize: '1rem' }}>{slot.title}</div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div style={{ fontWeight: '700', color: 'white', fontSize: '1.05rem', letterSpacing: '-0.1px' }}>{slot.title}</div>
                                                     <div style={{ display: 'flex', gap: '6px' }}>
                                                         <button
-                                                            onClick={() => {
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
                                                                 setEditingTaskId(`template_slot_${idx}`);
                                                                 setTitle(slot.title);
                                                                 setDuration(slot.duration);
@@ -1970,33 +2000,39 @@ function PlanningPageView({
                                                                 const [h, m] = slot.startTime.split(':').map(Number);
                                                                 setStartTime(setHours(setMinutes(startOfDay(new Date()), m), h));
                                                             }}
-                                                            style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '4px', borderRadius: '4px', cursor: 'pointer' }}
+                                                            style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'rgba(255,255,255,0.5)', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}
                                                         >
-                                                            <Edit2 size={12} />
+                                                            <Edit2 size={14} />
                                                         </button>
                                                         <button
-                                                            onClick={async () => {
-                                                                if (window.confirm('Remove this task from template?')) {
+                                                            onClick={async (e) => {
+                                                                e.stopPropagation();
+                                                                if (window.confirm('Remove this task?')) {
                                                                     const newSlots = previewingTemplate.slots.filter((_slot: TimeSlot, i: number) => i !== idx);
                                                                     await updateTemplate(previewingTemplate.id, { slots: newSlots });
                                                                     setPreviewingTemplate({ ...previewingTemplate, slots: newSlots });
                                                                 }
                                                             }}
-                                                            style={{ background: 'rgba(239, 68, 68, 0.2)', border: 'none', color: '#f87171', padding: '4px', borderRadius: '4px', cursor: 'pointer' }}
+                                                            style={{ background: 'rgba(185, 78, 72, 0.08)', border: 'none', color: '#B94E48', padding: '6px', borderRadius: '8px', cursor: 'pointer', display: 'flex' }}
                                                         >
-                                                            <Trash2 size={12} />
+                                                            <Trash2 size={14} />
                                                         </button>
                                                     </div>
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', fontWeight: '600', marginTop: '4px' }}>
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', fontWeight: '600' }}>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <Clock size={14} /> {slot.startTime}
+                                                        <Clock size={14} style={{ opacity: 0.6 }} /> {slot.startTime}
                                                     </div>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                        <TrendingUp size={14} /> {slot.priority}
+                                                        <TrendingUp size={14} style={{
+                                                            color: slot.priority === 'High' ? 'var(--priority-high)' :
+                                                                slot.priority === 'Medium' ? 'var(--priority-medium)' :
+                                                                    'var(--priority-low)',
+                                                            opacity: 0.8
+                                                        }} /> {slot.priority}
                                                     </div>
-                                                    <div style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                                                        {slot.duration} min
+                                                    <div style={{ background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem' }}>
+                                                        {slot.duration}m
                                                     </div>
                                                 </div>
                                             </>
@@ -2006,14 +2042,14 @@ function PlanningPageView({
                             })}
                         </div>
 
-                        <div style={{ display: 'flex', gap: '12px' }}>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: 'auto' }}>
                             <button
                                 onClick={() => setPreviewingTemplate(null)}
                                 style={{
                                     flex: 1, padding: '14px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '14px',
-                                    fontWeight: '800', cursor: 'pointer'
+                                    background: 'transparent',
+                                    border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: '14px',
+                                    fontWeight: '700', cursor: 'pointer', fontSize: '0.95rem'
                                 }}
                             >
                                 Close
@@ -2021,11 +2057,11 @@ function PlanningPageView({
                             <button
                                 onClick={() => { handleApplyTemplate(previewingTemplate); setPreviewingTemplate(null); }}
                                 style={{
-                                    flex: 2, padding: '14px',
-                                    background: 'linear-gradient(135deg, #ffffff, #f0f0f0)',
-                                    border: 'none', color: '#667eea', borderRadius: '14px',
-                                    fontWeight: '900', cursor: 'pointer',
-                                    boxShadow: '0 8px 20px rgba(0, 0, 0, 0.3)',
+                                    flex: 1.5, padding: '14px',
+                                    background: 'white',
+                                    border: 'none', color: '#000', borderRadius: '14px',
+                                    fontWeight: '900', cursor: 'pointer', fontSize: '0.95rem',
+                                    boxShadow: '0 8px 24px rgba(255, 255, 255, 0.15)',
                                     textTransform: 'uppercase',
                                     letterSpacing: '0.5px'
                                 }}

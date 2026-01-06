@@ -73,6 +73,16 @@
     z-index: 100;
 }
 
+/* Add relative positioning for mobile menu context */
+@media (max-width: 1024px) {
+    .hero-navbar-wrapper {
+        position: absolute;
+        top: clamp(12px, 4vw, 25px);
+        right: clamp(12px, 4vw, 25px);
+        z-index: 100;
+    }
+}
+
 .hero-navbar {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
@@ -138,6 +148,10 @@
     justify-content: center;
 }
 
+.hero-contact-btn.mobile-only {
+    display: none;
+}
+
 /* FLAWLESS TABLET/MOBILE STACK */
 @media (max-width: 1024px) {
     .hero-wrapper {
@@ -145,23 +159,53 @@
     }
 
     .hero-container {
-        flex-direction: column-reverse;
-        /* Robot ON TOP */
+        flex-direction: column;
+        /* Changed from column-reverse to correctly order */
         height: auto;
-        min-height: clamp(450px, 80vh, 650px);
-        padding: clamp(60px, 15vh, 100px) clamp(10px, 4vw, 30px) clamp(40px, 10vh, 60px);
+        min-height: clamp(500px, 85vh, 750px);
+        padding: clamp(80px, 15vh, 120px) 20px 60px;
         justify-content: center;
         background: radial-gradient(circle at center, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.03) 100%);
         border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 40px;
+    }
+
+    .hero-mobile-actions {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        margin-top: clamp(20px, 5vh, 40px);
+        z-index: 10;
+        order: 3;
+        /* Ensure button is last */
+    }
+
+    .hero-contact-btn.mobile-only {
+        display: flex;
+        padding: 10px 10px 10px 24px;
+        transform: scale(0.9);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: scale(0.8) translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(0.9) translateY(0);
+        }
     }
 
     .hero-character {
         position: relative;
         left: auto;
         bottom: auto;
-        width: clamp(160px, 65vw, 320px);
-        /* Scales down for narrow screens */
+        width: clamp(220px, 60vw, 320px);
         margin: 0 auto;
+        order: 1;
+        /* Robot on top */
     }
 
     .hero-background-text {
@@ -169,12 +213,13 @@
         top: auto;
         left: auto;
         transform: none;
-        font-size: clamp(2rem, 12vw, 5.5rem);
-        /* Scales down for narrow screens */
+        font-size: clamp(2.5rem, 11vw, 5.5rem);
         text-align: center;
         width: 100%;
         margin-top: -20px;
         letter-spacing: -1px;
+        order: 2;
+        /* Text in middle */
     }
 
     .hero-navbar-wrapper {
@@ -200,25 +245,136 @@
 }
 
 /* MOBILE MENU OVERLAY */
-.hero-navbar.menu-open {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: #000;
-    z-index: 1000;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border-radius: 0;
-}
+@media (max-width: 1024px) {
+    .hero-navbar.menu-open {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: auto;
+        min-width: 260px;
+        height: auto;
+        background: transparent;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+        border: none;
+        border-radius: 0;
+        padding: 0;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-end;
+        gap: 10px;
+        z-index: 1000;
+    }
 
-.hero-navbar.menu-open .hero-nav-links {
-    display: flex;
-    flex-direction: column;
-}
+    /* Position the toggle button at the top */
+    .hero-navbar.menu-open .hero-navbar-actions {
+        order: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 0;
+        width: auto;
+    }
 
-.hero-navbar.menu-open .hero-nav-links a {
-    font-size: 2rem;
+    /* Position the nav links below the button */
+    .hero-navbar.menu-open .hero-nav-links {
+        order: 2;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 24px;
+        margin: 0;
+        background: rgba(0, 0, 0, 0.97);
+        backdrop-filter: blur(30px);
+        -webkit-backdrop-filter: blur(30px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.1);
+        animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        min-width: 260px;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-15px) scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .hero-navbar.menu-open .hero-nav-links li {
+        margin: 0;
+        list-style: none;
+    }
+
+    .hero-navbar.menu-open .hero-nav-links a {
+        font-size: 1.125rem;
+        font-weight: 600;
+        padding: 16px 20px;
+        display: block;
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        color: rgba(255, 255, 255, 0.85);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-navbar.menu-open .hero-nav-links a::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        border-radius: 16px;
+    }
+
+    .hero-navbar.menu-open .hero-nav-links a:hover {
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        transform: translateX(4px);
+    }
+
+    .hero-navbar.menu-open .hero-nav-links a:hover::before {
+        opacity: 1;
+    }
+
+    .hero-navbar.menu-open .hero-nav-links a:active {
+        transform: translateX(4px) scale(0.98);
+    }
+
+    /* Hide the Sign In button in the dropdown to avoid duplication */
+    .hero-navbar.menu-open .hero-contact-btn {
+        display: none !important;
+    }
+
+    /* Keep the close button at the top in the same position as hamburger */
+    .hero-navbar.menu-open .hero-mobile-toggle {
+        position: relative;
+        width: clamp(40px, 12vw, 50px);
+        height: clamp(40px, 12vw, 50px);
+        background: rgba(255, 255, 255, 0.98) !important;
+        color: #000000 !important;
+        border: none !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.2);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        cursor: pointer;
+    }
+
+    .hero-navbar.menu-open .hero-mobile-toggle:hover {
+        background: #ffffff !important;
+        transform: scale(1.08) rotate(90deg);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .hero-navbar.menu-open .hero-mobile-toggle:active {
+        transform: scale(0.95) rotate(90deg);
+    }
 }

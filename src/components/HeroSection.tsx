@@ -10,9 +10,6 @@ const HeroSection: React.FC = () => {
     return (
         <section className="hero-wrapper">
             <div className="hero-container">
-                {/* Background Text */}
-                <h1 className="hero-background-text">TASKFLOW</h1>
-
                 {/* Floating Navbar */}
                 <div className="hero-navbar-wrapper">
                     <nav className={`hero-navbar ${isMenuOpen ? 'menu-open' : ''}`}>
@@ -47,6 +44,18 @@ const HeroSection: React.FC = () => {
                         alt="TaskFlow Bot"
                         className="hero-character-img"
                     />
+                </div>
+
+                {/* Background Text */}
+                <h1 className="hero-background-text">TASKFLOW</h1>
+
+                <div className="hero-mobile-actions">
+                    <button className="hero-contact-btn mobile-only" onClick={() => navigate('/login')}>
+                        Sign In
+                        <div className="hero-contact-arrow">
+                            <ArrowRight size={18} />
+                        </div>
+                    </button>
                 </div>
             </div>
         </section>

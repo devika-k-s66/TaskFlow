@@ -11,10 +11,10 @@ const FeaturesPage: React.FC = () => {
             details: [
                 "Automatically create tasks, routines, and reminders",
                 "Let the system handle repetitive planning",
-                "Example: 'Every weekday at 9 AM, prepare my work tasks'"
+                "Example: 'Every weekday at 9 AM, get tasks ready'"
             ],
-            icon: <Sparkles size={40} />,
-            color: "#667eea"
+            icon: <Sparkles size={32} />,
+            color: "var(--primary)"
         },
         {
             title: "Organized in One Place",
@@ -24,7 +24,7 @@ const FeaturesPage: React.FC = () => {
                 "Due dates, recurring tasks, tags & categories",
                 "Track progress and completions easily"
             ],
-            icon: <Layers size={40} />,
+            icon: <Layers size={32} />,
             color: "#3b82f6"
         },
         {
@@ -35,7 +35,7 @@ const FeaturesPage: React.FC = () => {
                 "Task bundles that repeat automatically",
                 "One-click enable or disable"
             ],
-            icon: <CheckCircle size={40} />,
+            icon: <CheckCircle size={32} />,
             color: "#10b981"
         },
         {
@@ -46,7 +46,7 @@ const FeaturesPage: React.FC = () => {
                 "Notifications via Web, Email, and Telegram",
                 "Snooze, repeat, or escalate reminders"
             ],
-            icon: <Clock size={40} />,
+            icon: <Clock size={32} />,
             color: "#f59e0b"
         },
         {
@@ -57,7 +57,7 @@ const FeaturesPage: React.FC = () => {
                 "Tasks, routines, and events together",
                 "Drag-and-drop scheduling & Clear indicators"
             ],
-            icon: <Calendar size={40} />,
+            icon: <Calendar size={32} />,
             color: "#8b5cf6"
         },
         {
@@ -68,40 +68,74 @@ const FeaturesPage: React.FC = () => {
                 "Productivity insights",
                 "Automation impact tracking"
             ],
-            icon: <BarChart2 size={40} />,
+            icon: <BarChart2 size={32} />,
             color: "#ec4899"
         }
     ];
 
     return (
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+        <div style={{
+            minHeight: '100vh',
+            background: 'var(--gradient-main)'
+        }}>
             <HeroSection />
 
-            <section className="section-padding">
-                <div className="section-title">
-                    <h2 style={{ fontSize: '3rem', marginBottom: '1rem', color: 'white' }}>Powerful Features</h2>
-                    <p style={{ fontSize: '1.2rem', color: 'rgba(255,255,255,0.8)', fontWeight: 400 }}>Everything you need to master your workflow</p>
+            <section className="section-padding" style={{ paddingTop: '80px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '80px' }}>
+                    <h2 className="section-title" style={{ marginBottom: '24px' }}>Powerful Features</h2>
+                    <p style={{
+                        fontSize: '1.25rem',
+                        color: 'rgba(255,255,255,0.7)',
+                        maxWidth: '600px',
+                        margin: '0 auto',
+                        lineHeight: '1.6'
+                    }}>
+                        Everything you need to master your workflow, built with precision and care.
+                    </p>
                 </div>
 
                 <div className="features-grid">
                     {features.map((f, i) => (
-                        <div key={i} className="feature-card">
-                            <div className="feature-icon-wrapper" style={{ color: f.color, background: 'rgba(255,255,255,0.9)' }}>
+                        <div key={i} className="feature-card animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
+                            <div className="feature-icon-wrapper" style={{
+                                color: f.color === '#667eea' ? 'var(--primary)' : f.color,
+                                marginBottom: '24px'
+                            }}>
                                 {f.icon}
                             </div>
-                            <h3>{f.title}</h3>
-                            <p style={{ marginBottom: '20px' }}>{f.description}</p>
-                            <ul style={{ listStyle: 'none', padding: 0 }}>
+                            <h3 style={{ fontSize: '1.5rem', marginBottom: '16px' }}>{f.title}</h3>
+                            <p style={{
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                lineHeight: '1.7',
+                                marginBottom: '24px',
+                                fontSize: '1rem'
+                            }}>
+                                {f.description}
+                            </p>
+                            <ul style={{
+                                listStyle: 'none',
+                                padding: 0,
+                                borderTop: '1px solid rgba(255,255,255,0.1)',
+                                paddingTop: '20px',
+                                marginTop: 'auto'
+                            }}>
                                 {f.details.map((detail, idx) => (
                                     <li key={idx} style={{
                                         display: 'flex',
                                         alignItems: 'start',
-                                        gap: '10px',
-                                        marginBottom: '10px',
-                                        color: 'rgba(255,255,255,0.85)',
-                                        fontSize: '0.95rem'
+                                        gap: '12px',
+                                        marginBottom: '12px',
+                                        color: '#94a3b8',
+                                        fontSize: '0.9rem',
+                                        lineHeight: '1.5'
                                     }}>
-                                        <div style={{ marginTop: '5px', width: '6px', height: '6px', borderRadius: '50%', background: f.color }} />
+                                        <div style={{
+                                            marginTop: '8px',
+                                            minWidth: '6px',
+                                            height: '6px',
+                                            borderRadius: '50%',
+                                            background: f.color === 'var(--primary)' ? '#667eea' : f.color
+                                        }} />
                                         {detail}
                                     </li>
                                 ))}

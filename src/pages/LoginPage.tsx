@@ -62,7 +62,7 @@ export default function LoginPage() {
                 background: 'var(--bg-card)',
                 backdropFilter: 'blur(20px)',
                 borderRadius: '24px',
-                padding: '48px',
+                padding: '32px',
                 boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
                 border: '1px solid var(--border-color)',
                 position: 'relative',
@@ -98,7 +98,7 @@ export default function LoginPage() {
                 <p style={{
                     textAlign: 'center',
                     color: 'var(--text-secondary)',
-                    marginBottom: '40px'
+                    marginBottom: '24px'
                 }}>
                     Sign in to start automating your workflow
                 </p>
@@ -182,7 +182,7 @@ export default function LoginPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '16px',
-                    margin: '24px 0',
+                    margin: '16px 0',
                     color: 'var(--text-muted)',
                     fontSize: '0.875rem'
                 }}>
@@ -208,7 +208,7 @@ export default function LoginPage() {
                         gap: '12px',
                         cursor: 'not-allowed',
                         transition: 'all 0.2s',
-                        marginBottom: '24px',
+                        marginBottom: '16px',
                         opacity: 0.4
                     }}
                     disabled
@@ -233,7 +233,7 @@ export default function LoginPage() {
                 <button
                     onClick={() => navigate('/')}
                     style={{
-                        marginTop: '24px',
+                        marginTop: '16px',
                         width: '100%',
                         padding: '12px',
                         border: 'none',

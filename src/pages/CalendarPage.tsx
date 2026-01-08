@@ -82,6 +82,7 @@ export default function CalendarPage() {
 
     const handleDateClick = (dayNum: number) => {
         const selected = new Date(currentDate.getFullYear(), currentDate.getMonth(), dayNum);
+
         setSelectedDateForCreation(selected);
         setShowDateSelectionPrompt(false);
         // Reset creating state when clicking a date manually
@@ -792,14 +793,33 @@ export default function CalendarPage() {
                                                         );
                                                     })}
                                                     {events.length > 3 && (
-                                                        <div style={{
-                                                            fontSize: '0.75rem',
-                                                            color: 'rgba(255,255,255,0.6)',
-                                                            paddingLeft: '6px',
-                                                            fontWeight: '500'
-                                                        }}>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDateClick(day as number);
+                                                            }}
+                                                            style={{
+                                                                fontSize: '0.75rem',
+                                                                color: 'rgba(255,255,255,0.7)',
+                                                                paddingLeft: '6px',
+                                                                fontWeight: '600',
+                                                                background: 'transparent',
+                                                                border: 'none',
+                                                                cursor: 'pointer',
+                                                                textAlign: 'left',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            onMouseEnter={(e) => {
+                                                                e.currentTarget.style.color = 'rgba(255,255,255,1)';
+                                                                e.currentTarget.style.transform = 'translateX(2px)';
+                                                            }}
+                                                            onMouseLeave={(e) => {
+                                                                e.currentTarget.style.color = 'rgba(255,255,255,0.7)';
+                                                                e.currentTarget.style.transform = 'translateX(0)';
+                                                            }}
+                                                        >
                                                             +{events.length - 3} more
-                                                        </div>
+                                                        </button>
                                                     )}
                                                 </div>
                                             )}
@@ -1105,6 +1125,14 @@ function PlanningPageView({
 
     const handleAddToPlan = async () => {
         if (!title.trim() || !startTime) return;
+
+        // Prevent creating tasks for past dates
+        const today = startOfDay(new Date());
+        const selectedDay = startOfDay(selectedDate);
+        if (selectedDay < today) {
+            alert('Cannot create tasks for past dates.');
+            return;
+        }
 
         if (isOverlapping(startTime, duration, editingTaskId || undefined)) {
             alert('This time slot overlaps with an existing task. Please adjust the time or duration.');

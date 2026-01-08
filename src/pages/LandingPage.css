@@ -71,55 +71,7 @@
     font-size: 0.9rem;
 }
 
-/* Audience Section */
-.audience-section {
-    background: rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(10px);
-    border-radius: 40px;
-    margin: 40px 20px;
-    padding: 80px 40px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
 
-.audience-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 24px;
-}
-
-.audience-card {
-    padding: 30px;
-    border-radius: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: all 0.3s ease;
-}
-
-.audience-card:hover {
-    background: rgba(255, 255, 255, 0.15);
-    transform: scale(1.02);
-}
-
-.audience-tag {
-    display: inline-block;
-    padding: 6px 12px;
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border-radius: 100px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-bottom: 16px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.audience-card h4 {
-    color: white;
-}
-
-.audience-card p {
-    color: rgba(255, 255, 255, 0.8);
-}
 
 /* Visual Section */
 .visual-section {
@@ -143,6 +95,29 @@
 
 .visual-content li {
     color: white;
+}
+
+@media (max-width: 768px) {
+    .visual-section {
+        margin-top: 40px;
+        gap: 32px;
+    }
+
+    .visual-content h2 {
+        font-size: 1.75rem;
+        text-align: center;
+    }
+
+    .visual-content p {
+        text-align: center;
+        font-size: 1.1rem !important;
+    }
+
+    .visual-content ul {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
 }
 
 .visual-mockup {
@@ -184,7 +159,7 @@
 
 .cta-button {
     background: white;
-    color: var(--primary);
+    color: #000000;
     padding: 18px 48px;
     border-radius: 100px;
     font-size: 1.2rem;
@@ -217,16 +192,282 @@
     animation: fadeInMain 0.8s ease-out forwards;
 }
 
+.read-more-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--primary);
+    cursor: pointer;
+    padding: 8px;
+    margin-top: auto;
+    align-self: center;
+    transition: color 0.3s ease;
+}
+
+.read-more-btn:hover {
+    color: white;
+}
+
+/* Responsive Breakpoints */
 @media (max-width: 768px) {
-    .section-title {
-        font-size: 2rem;
+    .section-padding {
+        padding: 60px 16px;
     }
+
+    .section-title {
+        font-size: 1.75rem;
+        margin-bottom: 40px;
+    }
+
+    /* 2-column grid on mobile like the phone mockup */
+    .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+
+    .feature-card {
+        padding: 20px 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        min-height: auto;
+    }
+
+    .feature-icon-wrapper {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+    }
+
+    .feature-icon-wrapper svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    .feature-card h3 {
+        font-size: 1rem;
+        margin-bottom: 10px;
+        line-height: 1.3;
+        font-weight: 700;
+    }
+
+    .feature-card p {
+        font-size: 0.85rem;
+        line-height: 1.5;
+        margin-bottom: 12px;
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    .feature-example {
+        display: block;
+        font-size: 0.75rem;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.2);
+        line-height: 1.4;
+    }
+
+
+
 
     .visual-section {
         grid-template-columns: 1fr;
+        gap: 40px;
     }
 
+    .visual-content h2 {
+        font-size: 1.75rem;
+    }
+
+    .audience-section {
+        padding: 60px 24px;
+        margin: 40px 16px;
+    }
+
+    .cta-banner {
+        padding: 60px 24px;
+        margin: 60px 16px;
+    }
+
+    .cta-banner h2 {
+        font-size: 2rem;
+    }
+
+    footer {
+        padding: 80px 24px 40px !important;
+    }
+
+    footer p {
+        margin-bottom: 24px;
+    }
+}
+
+/* Tablet: 3 columns */
+@media (min-width: 769px) and (max-width: 1024px) {
     .features-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+    }
+
+    .feature-card {
+        padding: 32px 24px;
+    }
+}
+
+/* Desktop: 3 columns with larger cards */
+@media (min-width: 1025px) {
+    .features-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+    }
+}
+
+/* Reduce height on very small screens with dot-dot truncation */
+@media (max-width: 480px) {
+    .feature-card p {
+        display: -webkit-box !important;
+        -webkit-line-clamp: 2 !important;
+        line-clamp: 2 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        margin-bottom: 0 !important;
+        font-size: 0.75rem !important;
+        line-height: 1.3 !important;
+    }
+
+    .feature-example {
+        display: -webkit-box !important;
+        -webkit-line-clamp: 1 !important;
+        line-clamp: 1 !important;
+        -webkit-box-orient: vertical !important;
+        overflow: hidden !important;
+        font-size: 0.7rem !important;
+        line-height: 1.2 !important;
+        margin-top: 6px !important;
+        padding-top: 6px !important;
+        border-top: 1px dashed rgba(255, 255, 255, 0.2) !important;
+    }
+
+    .feature-card {
+        padding: 12px 10px !important;
+        gap: 2px !important;
+        min-height: auto !important;
+        aspect-ratio: auto !important;
+    }
+
+    .feature-icon-wrapper {
+        width: 32px !important;
+        height: 32px !important;
+        margin-bottom: 6px !important;
+    }
+
+    .feature-icon-wrapper svg {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    .feature-card h3 {
+        font-size: 0.9rem !important;
+        margin-bottom: 4px !important;
+    }
+
+    .read-more-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Modal Expansion Styles for Premium Mobile View - Robust Implementation */
+    .mobile-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        z-index: 9998;
+        animation: fadeInMain 0.3s ease-out forwards;
+    }
+
+    .feature-card.expanded {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%) !important;
+        animation: none !important;
+        /* Stop initial animation from conflicting */
+        width: 90vw !important;
+        max-width: 380px !important;
+        height: auto !important;
+        max-height: 85vh !important;
+        z-index: 9999;
+        margin: 0 !important;
+
+        /* Box Styling */
+        padding: 24px !important;
+        background: #121212 !important;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+
+        /* Layout */
+        display: flex;
+        flex-direction: column;
+        gap: 16px !important;
+        overflow-y: auto;
+    }
+
+    .feature-card.expanded p {
+        -webkit-line-clamp: unset !important;
+        line-clamp: unset !important;
+        display: block !important;
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
+        margin-bottom: 0 !important;
+        color: #e2e8f0 !important;
+    }
+
+    .feature-card.expanded .feature-example {
+        -webkit-line-clamp: unset !important;
+        line-clamp: unset !important;
+        display: block !important;
+        font-size: 0.9rem !important;
+        margin-top: 8px !important;
+        padding: 16px !important;
+        border-top: none !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 8px;
+        color: #94a3b8 !important;
+        font-style: italic;
+    }
+
+    .feature-card.expanded .feature-icon-wrapper {
+        width: 48px !important;
+        height: 48px !important;
+        margin-bottom: 8px !important;
+        background: rgba(255, 255, 255, 0.08);
+        /* Highlight icon container */
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .feature-card.expanded .feature-icon-wrapper svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    .feature-card.expanded h3 {
+        font-size: 1.25rem !important;
+        margin-bottom: 8px !important;
+        color: white;
+    }
+
+    .feature-card.expanded .read-more-btn {
+        margin-top: auto;
+        width: 100%;
+        background: rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 10px;
     }
 }

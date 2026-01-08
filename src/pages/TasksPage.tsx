@@ -9,7 +9,7 @@ export default function TasksPage() {
     const { tasks, updateTask, deleteTask } = useTasks();
     const location = useLocation();
     const navigate = useNavigate();
-    const { onCreateTask } = useOutletContext<{ onCreateTask: () => void }>();
+    const { onCreateTask, searchQuery } = useOutletContext<{ onCreateTask: () => void, searchQuery: string }>();
     const [selectedFilter, setSelectedFilter] = useState(location.state?.filter || 'all');
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -65,6 +65,7 @@ export default function TasksPage() {
 
     const isMobile = width < 768;
     const isSmallPhone = width < 480;
+    const isTinyMobile = width < 340;
 
     // Derived State for Filters
     const getFilteredTasks = () => {
@@ -72,20 +73,39 @@ export default function TasksPage() {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
+        // 0. Search Filter
+        // 0. Search Filter
+        if (searchQuery) {
+            const query = searchQuery.toLowerCase();
+            const queryNoSpaces = query.replace(/\s+/g, '');
+
+            filtered = filtered.filter(t => {
+                const title = t.title.toLowerCase();
+                const titleNoSpaces = title.replace(/\s+/g, '');
+                const desc = t.description?.toLowerCase() || '';
+                const descNoSpaces = desc.replace(/\s+/g, '');
+
+                return title.includes(query) ||
+                    titleNoSpaces.includes(queryNoSpaces) ||
+                    desc.includes(query) ||
+                    descNoSpaces.includes(queryNoSpaces);
+            });
+        }
+
         // 1. First apply the explicit status/type filter
-        if (selectedFilter === 'active') filtered = tasks.filter(t => !t.completed);
-        else if (selectedFilter === 'today') filtered = tasks.filter(t => isToday(t.deadline));
-        else if (selectedFilter === 'week') filtered = tasks.filter(t => {
+        if (selectedFilter === 'active') filtered = filtered.filter(t => !t.completed);
+        else if (selectedFilter === 'today') filtered = filtered.filter(t => isToday(t.deadline));
+        else if (selectedFilter === 'week') filtered = filtered.filter(t => {
             const diff = Math.floor((t.deadline.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
             return diff >= 0 && diff <= 7;
         });
-        else if (selectedFilter === 'month') filtered = tasks.filter(t => {
+        else if (selectedFilter === 'month') filtered = filtered.filter(t => {
             const diff = Math.floor((t.deadline.getTime() - startOfToday.getTime()) / (1000 * 60 * 60 * 24));
             return diff >= 0 && diff <= 30;
         });
-        else if (selectedFilter === 'completed') filtered = tasks.filter(t => t.completed);
-        else if (selectedFilter === 'high') filtered = tasks.filter(t => t.priority === 'High');
-        else if (selectedFilter === 'overdue') filtered = tasks.filter(t => !t.completed && isPast(t.deadline));
+        else if (selectedFilter === 'completed') filtered = filtered.filter(t => t.completed);
+        else if (selectedFilter === 'high') filtered = filtered.filter(t => t.priority === 'High');
+        else if (selectedFilter === 'overdue') filtered = filtered.filter(t => !t.completed && isPast(t.deadline));
 
         // 2. Then by date range
         if (activeRangeStart) {
@@ -134,15 +154,30 @@ export default function TasksPage() {
                 key={task.id}
                 className="glass-clear"
                 style={{
-                    padding: isSmallPhone ? '12px' : isMobile ? '16px' : '20px',
+                    padding: 'clamp(8px, 3vw, 20px)',
                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                     cursor: 'pointer',
-                    border: `1px solid ${isOverdue ? 'rgba(239, 68, 68, 0.3)' : 'rgba(255,255,255,0.1)'}`,
+                    // Premium Gradient Backgrounds
+                    background: isCompleted
+                        ? 'linear-gradient(135deg, rgba(74, 222, 128, 0.08) 0%, rgba(74, 222, 128, 0.01) 100%)'
+                        : isOverdue
+                            ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.01) 100%)'
+                            : 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.005) 100%)',
+                    // Crisper Borders
+                    border: isCompleted
+                        ? '1px solid rgba(74, 222, 128, 0.2)'
+                        : isOverdue
+                            ? '1px solid rgba(239, 68, 68, 0.2)'
+                            : '1px solid rgba(255,255,255,0.08)',
                     position: 'relative',
                     display: 'flex',
                     flexDirection: 'column',
                     height: '100%',
-                    boxShadow: isOverdue ? '0 0 15px rgba(239, 68, 68, 0.1)' : 'none'
+                    borderRadius: '16px',
+                    // Depth Shadow
+                    boxShadow: isOverdue
+                        ? '0 8px 32px rgba(239, 68, 68, 0.1)'
+                        : '0 4px 20px rgba(0,0,0,0.2)'
                 }}
                 onMouseEnter={(e) => {
                     if (!isMobile) {
@@ -157,7 +192,7 @@ export default function TasksPage() {
                     }
                 }}
             >
-                <div style={{ display: 'flex', gap: isSmallPhone ? '8px' : '12px', alignItems: 'flex-start' }}>
+                <div style={{ display: 'flex', gap: 'clamp(6px, 2vw, 12px)', alignItems: 'flex-start' }}>
                     <div
                         onClick={async (e) => {
                             e.stopPropagation();
@@ -174,8 +209,8 @@ export default function TasksPage() {
                             }
                         }}
                         style={{
-                            width: isSmallPhone ? '20px' : '24px',
-                            height: isSmallPhone ? '20px' : '24px',
+                            width: isSmallPhone ? '16px' : '24px',
+                            height: isSmallPhone ? '16px' : '24px',
                             borderRadius: '50%',
                             border: `2px solid ${isCompleted ? '#4ade80' : 'rgba(255,255,255,0.5)'}`,
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -186,42 +221,61 @@ export default function TasksPage() {
                             transition: 'all 0.2s'
                         }}
                     >
-                        {isCompleted && <Check size={isSmallPhone ? 12 : 16} color="#4ade80" strokeWidth={3} />}
+                        {isCompleted && <Check size={isSmallPhone ? 10 : 16} color="#4ade80" strokeWidth={3} />}
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                        <div style={{
+                            display: 'flex',
+                            flexDirection: isSmallPhone ? 'column' : 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: isSmallPhone ? '4px' : 'clamp(2px, 2vw, 8px)',
+                            marginBottom: '0'
+                        }}>
                             <h4 style={{
-                                fontSize: isSmallPhone ? '0.95rem' : '1.05rem',
+                                fontSize: 'clamp(0.75rem, 2.5vw, 1.05rem)',
                                 fontWeight: '600',
                                 color: isCompleted ? '#4ade80' : 'white',
                                 margin: 0,
-                                lineHeight: '1.3',
-                                wordBreak: 'break-word'
+                                lineHeight: '1.2',
+                                width: '100%',
+                                wordBreak: 'break-word',
+                                hyphens: 'auto'
                             }}>
                                 {task.title}
                             </h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: isSmallPhone ? 'row' : 'column',
+                                alignItems: isSmallPhone ? 'center' : 'flex-end',
+                                gap: '4px',
+                                flexShrink: 0,
+                                marginBottom: '0',
+                                marginTop: isSmallPhone ? '4px' : '0'
+                            }}>
                                 <span className="badge" style={{
                                     background: task.priority === 'High' ? 'rgba(255, 59, 48, 0.2)' : task.priority === 'Medium' ? 'rgba(255, 149, 0, 0.2)' : 'rgba(52, 199, 89, 0.2)',
                                     color: task.priority === 'High' ? '#f87171' : task.priority === 'Medium' ? '#fbbf24' : '#4ade80',
                                     border: '1px solid rgba(255,255,255,0.1)',
-                                    fontSize: '0.65rem',
-                                    padding: '2px 8px',
+                                    fontSize: 'clamp(0.5rem, 1.5vw, 0.7rem)',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
                                     flexShrink: 0,
-                                    height: 'max-content'
+                                    height: 'max-content',
+                                    lineHeight: 1
                                 }}>
                                     {task.priority}
                                 </span>
                                 {isOverdue && (
-                                    <span style={{ color: '#ef4444', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase' }}>Overdue</span>
+                                    <span style={{ color: '#ef4444', fontSize: '0.6rem', fontWeight: '800', textTransform: 'uppercase' }}>Overdue</span>
                                 )}
                             </div>
                         </div>
 
                         {task.description && (
                             <p style={{
-                                fontSize: '0.85rem',
+                                fontSize: 'clamp(0.8rem, 2vw, 0.85rem)',
                                 color: 'rgba(255,255,255,0.6)',
                                 margin: '8px 0',
                                 lineHeight: '1.4',
@@ -235,7 +289,7 @@ export default function TasksPage() {
                         )}
 
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
-                            <span className="flex items-center gap-xs" style={{ fontSize: '0.7rem', color: isOverdue ? '#ef4444' : 'rgba(255,255,255,0.5)' }}>
+                            <span className="flex items-center gap-xs" style={{ fontSize: 'clamp(0.65rem, 1.5vw, 0.7rem)', color: isOverdue ? '#ef4444' : 'rgba(255,255,255,0.5)' }}>
                                 <Clock size={12} />
                                 {format(task.deadline, 'MMM d, h:mm a')}
                             </span>
@@ -591,8 +645,8 @@ export default function TasksPage() {
 
                         <div style={{
                             display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                            gap: '20px'
+                            gridTemplateColumns: width < 768 ? 'repeat(2, 1fr)' : 'repeat(auto-fill, minmax(320px, 1fr))',
+                            gap: isTinyMobile ? '8px' : isSmallPhone ? '12px' : '20px'
                         }}>
                             {filteredTasks.length === 0 ? (
                                 <div style={{ gridColumn: '1/-1', padding: '100px 0', textAlign: 'center', color: 'rgba(255,255,255,0.3)', border: '2px dashed rgba(255,255,255,0.06)', borderRadius: '28px' }}>

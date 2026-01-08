@@ -329,8 +329,8 @@ export default function Dashboard() {
                 {/* 2. STATS GRID */}
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: width < 600 ? '1fr' : width < 1100 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
-                    gap: isMobile ? '16px' : '24px',
+                    gridTemplateColumns: width < 1100 ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+                    gap: isMobile ? '12px' : '24px',
                     marginBottom: isMobile ? '32px' : '48px'
                 }}>
                     {/* Stats Item 1 - Tasks Pending */}
@@ -338,7 +338,7 @@ export default function Dashboard() {
                         className="glass-clear"
                         onClick={() => navigate('/dashboard/tasks', { state: { filter: 'active', rangeStart: rangeStart.toISOString(), rangeEnd: rangeEnd ? rangeEnd.toISOString() : null } })}
                         style={{
-                            padding: isMobile ? '20px' : '24px',
+                            padding: isSmallPhone ? '16px' : isMobile ? '20px' : '24px',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             cursor: 'pointer',
                             borderRadius: '20px'
@@ -358,16 +358,16 @@ export default function Dashboard() {
                     >
                         <div className="flex items-center justify-between mb-md">
                             <div style={{
-                                width: '44px', height: '44px',
+                                width: isSmallPhone ? '36px' : '44px', height: isSmallPhone ? '36px' : '44px',
                                 borderRadius: '12px',
                                 background: 'rgba(255, 255, 255, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
                             }}>
-                                <CheckSquare size={22} />
+                                <CheckSquare size={isSmallPhone ? 18 : 22} />
                             </div>
-                            <span style={{ fontSize: '2.25rem', fontWeight: '700', color: 'white' }}>{stats.tasksPending}</span>
+                            <span style={{ fontSize: isSmallPhone ? '1.75rem' : '2.25rem', fontWeight: '700', color: 'white' }}>{stats.tasksPending}</span>
                         </div>
                         <div>
-                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '12px' }}>
+                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: isSmallPhone ? '0.75rem' : '0.85rem', marginBottom: '12px' }}>
                                 {timeRange === 'today' ? "Today's" : (rangeEnd ? "Scheduled" : format(rangeStart, 'MMM do'))} Tasks
                             </p>
                             <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
@@ -381,7 +381,7 @@ export default function Dashboard() {
                         className="glass-clear"
                         onClick={() => navigate('/dashboard/tasks', { state: { filter: 'overdue', rangeStart: rangeStart.toISOString(), rangeEnd: rangeEnd ? rangeEnd.toISOString() : null } })}
                         style={{
-                            padding: isMobile ? '20px' : '24px',
+                            padding: isSmallPhone ? '16px' : isMobile ? '20px' : '24px',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             cursor: 'pointer',
                             borderRadius: '20px'
@@ -401,16 +401,16 @@ export default function Dashboard() {
                     >
                         <div className="flex items-center justify-between mb-md">
                             <div style={{
-                                width: '44px', height: '44px',
+                                width: isSmallPhone ? '36px' : '44px', height: isSmallPhone ? '36px' : '44px',
                                 borderRadius: '12px',
                                 background: 'rgba(255, 59, 48, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#f87171'
                             }}>
-                                <AlertCircle size={22} />
+                                <AlertCircle size={isSmallPhone ? 18 : 22} />
                             </div>
-                            <span style={{ fontSize: '2.25rem', fontWeight: '700', color: 'white' }}>{stats.overdueItems}</span>
+                            <span style={{ fontSize: isSmallPhone ? '1.75rem' : '2.25rem', fontWeight: '700', color: 'white' }}>{stats.overdueItems}</span>
                         </div>
                         <div>
-                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '12px' }}>
+                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: isSmallPhone ? '0.75rem' : '0.85rem', marginBottom: '12px' }}>
                                 Needs Attention
                             </p>
                             <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
@@ -424,7 +424,7 @@ export default function Dashboard() {
                         className="glass-clear"
                         onClick={() => navigate('/dashboard/reminders')}
                         style={{
-                            padding: isMobile ? '20px' : '24px',
+                            padding: isSmallPhone ? '16px' : isMobile ? '20px' : '24px',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             cursor: 'pointer',
                             borderRadius: '20px'
@@ -444,16 +444,16 @@ export default function Dashboard() {
                     >
                         <div className="flex items-center justify-between mb-md">
                             <div style={{
-                                width: '44px', height: '44px',
+                                width: isSmallPhone ? '36px' : '44px', height: isSmallPhone ? '36px' : '44px',
                                 borderRadius: '12px',
                                 background: 'rgba(255, 149, 0, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fbbf24'
                             }}>
-                                <Bell size={22} />
+                                <Bell size={isSmallPhone ? 18 : 22} />
                             </div>
-                            <span style={{ fontSize: '2.25rem', fontWeight: '700', color: 'white' }}>{stats.upcomingReminders}</span>
+                            <span style={{ fontSize: isSmallPhone ? '1.75rem' : '2.25rem', fontWeight: '700', color: 'white' }}>{stats.upcomingReminders}</span>
                         </div>
                         <div>
-                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '12px' }}>Reminders</p>
+                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: isSmallPhone ? '0.75rem' : '0.85rem', marginBottom: '12px' }}>Reminders</p>
                             <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
                                 <div style={{ width: `${stats.remindersProgress}%`, height: '100%', background: '#fbbf24', borderRadius: '99px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
                             </div>
@@ -465,7 +465,7 @@ export default function Dashboard() {
                         className="glass-clear"
                         onClick={() => navigate('/dashboard/automations')}
                         style={{
-                            padding: isMobile ? '20px' : '24px',
+                            padding: isSmallPhone ? '16px' : isMobile ? '20px' : '24px',
                             transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                             cursor: 'pointer',
                             borderRadius: '20px'
@@ -485,16 +485,16 @@ export default function Dashboard() {
                     >
                         <div className="flex items-center justify-between mb-md">
                             <div style={{
-                                width: '44px', height: '44px',
+                                width: isSmallPhone ? '36px' : '44px', height: isSmallPhone ? '36px' : '44px',
                                 borderRadius: '12px',
                                 background: 'rgba(52, 199, 89, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4ade80'
                             }}>
-                                <Zap size={22} />
+                                <Zap size={isSmallPhone ? 18 : 22} />
                             </div>
-                            <span style={{ fontSize: '2.25rem', fontWeight: '700', color: 'white' }}>{stats.automationsRunning}</span>
+                            <span style={{ fontSize: isSmallPhone ? '1.75rem' : '2.25rem', fontWeight: '700', color: 'white' }}>{stats.automationsRunning}</span>
                         </div>
                         <div>
-                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', marginBottom: '12px' }}>Active Automations</p>
+                            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: isSmallPhone ? '0.75rem' : '0.85rem', marginBottom: '12px' }}>Active Automations</p>
                             <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '99px', overflow: 'hidden' }}>
                                 <div style={{ width: `${stats.automationsProgress}%`, height: '100%', background: '#4ade80', borderRadius: '99px', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)' }}></div>
                             </div>

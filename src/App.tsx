@@ -15,7 +15,6 @@ import CalendarPage from './pages/CalendarPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import FeaturesPage from './pages/FeaturesPage';
-import SolutionsPage from './pages/SolutionsPage';
 import PricingPage from './pages/PricingPage';
 import AboutPage from './pages/AboutPage';
 import TemplatesPage from './pages/TemplatesPage';
@@ -23,14 +22,23 @@ import './index.css';
 
 import ReminderOrchestrator from './components/ReminderOrchestrator';
 
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleCreateTask = () => {
     navigate('/dashboard/calendar', { state: { scrollToCalendar: true } });
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() && location.pathname !== '/dashboard/tasks') {
+      navigate('/dashboard/tasks');
+    }
   };
 
   return (
@@ -41,8 +49,10 @@ function DashboardLayout() {
         <Header
           onCreateTask={handleCreateTask}
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          searchQuery={searchQuery}
+          setSearchQuery={handleSearch}
         />
-        <Outlet context={{ onCreateTask: handleCreateTask }} />
+        <Outlet context={{ onCreateTask: handleCreateTask, searchQuery }} />
       </div>
     </div>
   );
@@ -57,7 +67,6 @@ function App() {
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/features" element={<FeaturesPage />} />
-          <Route path="/solutions" element={<SolutionsPage />} />
           <Route path="/pricing" element={<PricingPage />} />
           <Route path="/about" element={<AboutPage />} />
 

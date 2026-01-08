@@ -4,21 +4,25 @@ import {
     CheckCircle,
     BarChart3,
     Clock,
-    Calendar,
     Shield,
-    Users,
-    Brain,
-    Briefcase,
-    GraduationCap,
-    Home,
-    Heart,
-    ArrowRight
+    Calendar,
+    ArrowRight,
+    ChevronDown
 } from 'lucide-react';
+import { useState } from 'react';
 import HeroSection from '../components/HeroSection';
 import './LandingPage.css';
 
 export default function LandingPage() {
     const navigate = useNavigate();
+    const [expandedCards, setExpandedCards] = useState<number[]>([]);
+
+    const toggleCard = (index: number) => {
+        // Modal style: only one expanded at a time on mobile
+        setExpandedCards(prev =>
+            prev.includes(index) ? [] : [index]
+        );
+    };
 
     const features = [
         {
@@ -65,83 +69,57 @@ export default function LandingPage() {
         }
     ];
 
-    const audiences = [
-        {
-            icon: <GraduationCap size={24} />,
-            title: 'Students',
-            desc: 'Study routines, exam tracking, focus planning.',
-            tag: 'Learn'
-        },
-        {
-            icon: <Briefcase size={24} />,
-            title: 'Professionals',
-            desc: 'Meeting-based tasks, workday automations, deadlines.',
-            tag: 'Work'
-        },
-        {
-            icon: <Users size={24} />,
-            title: 'Freelancers',
-            desc: 'Project tracking, flexible routines, time awareness.',
-            tag: 'Build'
-        },
-        {
-            icon: <Home size={24} />,
-            title: 'Homemakers',
-            desc: 'Simple daily planning, family schedules, reminders.',
-            tag: 'Life'
-        },
-        {
-            icon: <Heart size={24} />,
-            title: 'Elders',
-            desc: 'Clean interface, large text, guided setup.',
-            tag: 'Care'
-        },
-        {
-            icon: <Brain size={24} />,
-            title: 'ADHD Users',
-            desc: 'Minimal views, one-task focus, gentle reminders.',
-            tag: 'Focus'
-        }
-    ];
+
 
     return (
         <div style={{
             minHeight: '100vh',
             background: 'var(--gradient-main)'
         }}>
+            {/* Backdrop for mobile modal expansion */}
+            {expandedCards.length > 0 && (
+                <div
+                    className="mobile-backdrop"
+                    onClick={() => setExpandedCards([])}
+                />
+            )}
             <HeroSection />
 
             <section className="section-padding">
                 <h2 className="section-title">Everything you need to master your day</h2>
                 <div className="features-grid">
-                    {features.map((f, i) => (
-                        <div key={i} className="feature-card animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
-                            <div className="feature-icon-wrapper" style={{ color: f.color === '#667eea' ? 'var(--primary)' : f.color }}>
-                                {f.icon}
+                    {features.map((f, i) => {
+                        const isExpanded = expandedCards.includes(i);
+                        return (
+                            <div
+                                key={i}
+                                className={`feature-card animate-fade-in ${isExpanded ? 'expanded' : ''}`}
+                                style={{ animationDelay: `${i * 0.1}s` }}
+                            >
+                                <div className="feature-icon-wrapper" style={{ color: f.color === '#667eea' ? 'var(--primary)' : f.color }}>
+                                    {f.icon}
+                                </div>
+                                <h3>{f.title}</h3>
+                                <p className="feature-description">{f.description}</p>
+                                <div className="feature-example">{f.example}</div>
+
+                                <button
+                                    className="read-more-btn"
+                                    onClick={() => toggleCard(i)}
+                                    aria-label={isExpanded ? "Show less" : "Read more"}
+                                >
+                                    <ChevronDown size={20} style={{
+                                        transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                                        transition: 'transform 0.3s ease'
+                                    }} />
+                                </button>
                             </div>
-                            <h3>{f.title}</h3>
-                            <p>{f.description}</p>
-                            <div className="feature-example">{f.example}</div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </section>
 
-            <section className="audience-section section-padding">
-                <h2 className="section-title">Designed for Everyone</h2>
-                <div className="audience-grid">
-                    {audiences.map((a, i) => (
-                        <div key={i} className="audience-card">
-                            <span className="audience-tag">{a.tag}</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                                <div style={{ color: 'var(--primary)' }}>{a.icon}</div>
-                                <h4 style={{ margin: 0, fontWeight: 700 }}>{a.title}</h4>
-                            </div>
-                            <p style={{ margin: 0, fontSize: '0.9rem', color: '#64748b' }}>{a.desc}</p>
-                        </div>
-                    ))}
-                </div>
-            </section>
+
 
             <section className="section-padding">
                 <div className="visual-section">

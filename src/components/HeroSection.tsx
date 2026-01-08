@@ -3,8 +3,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import './HeroSection.css';
 import { ArrowRight, Menu, X } from 'lucide-react';
 
+import { useAuth } from '../contexts/AuthContext';
+
 const HeroSection: React.FC = () => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
     return (
@@ -15,17 +18,33 @@ const HeroSection: React.FC = () => {
                     <nav className={`hero-navbar ${isMenuOpen ? 'menu-open' : ''}`}>
                         <ul className="hero-nav-links">
                             <li><Link to="/features">Features</Link></li>
-                            <li><Link to="/solutions">Solutions</Link></li>
+
                             <li><Link to="/pricing">Pricing</Link></li>
                             <li><Link to="/about">About</Link></li>
                         </ul>
                         <div className="hero-navbar-actions">
-                            <button className="hero-contact-btn" onClick={() => navigate('/login')}>
-                                Sign In
-                                <div className="hero-contact-arrow">
-                                    <ArrowRight size={18} />
+                            {user ? (
+                                <div
+                                    className="user-avatar"
+                                    onClick={() => navigate('/dashboard')}
+                                    title="Go to Dashboard"
+                                    style={{
+                                        ...(user?.photoURL ? { backgroundImage: `url(${user.photoURL})` } : {}),
+                                        backgroundSize: 'cover',
+                                        backgroundPosition: 'center',
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    {!user?.photoURL && (user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U')}
                                 </div>
-                            </button>
+                            ) : (
+                                <button className="hero-contact-btn" onClick={() => navigate('/login')}>
+                                    Sign In
+                                    <div className="hero-contact-arrow">
+                                        <ArrowRight size={18} />
+                                    </div>
+                                </button>
+                            )}
                             <button
                                 className="hero-mobile-toggle"
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -50,12 +69,21 @@ const HeroSection: React.FC = () => {
                 <h1 className="hero-background-text">TASKFLOW</h1>
 
                 <div className="hero-mobile-actions">
-                    <button className="hero-contact-btn mobile-only" onClick={() => navigate('/login')}>
-                        Sign In
-                        <div className="hero-contact-arrow">
-                            <ArrowRight size={18} />
-                        </div>
-                    </button>
+                    {user ? (
+                        <button className="hero-contact-btn mobile-only" onClick={() => navigate('/dashboard')}>
+                            Dashboard
+                            <div className="hero-contact-arrow">
+                                <ArrowRight size={18} />
+                            </div>
+                        </button>
+                    ) : (
+                        <button className="hero-contact-btn mobile-only" onClick={() => navigate('/login')}>
+                            Sign In
+                            <div className="hero-contact-arrow">
+                                <ArrowRight size={18} />
+                            </div>
+                        </button>
+                    )}
                 </div>
             </div>
         </section>

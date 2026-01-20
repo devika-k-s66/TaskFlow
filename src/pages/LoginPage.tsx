@@ -56,18 +56,7 @@ export default function LoginPage() {
                 filter: 'blur(80px)',
                 zIndex: 0
             }}></div>
-            <div style={{
-                maxWidth: '480px',
-                width: '100%',
-                background: 'var(--bg-card)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '24px',
-                padding: '32px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
-                border: '1px solid var(--border-color)',
-                position: 'relative',
-                zIndex: 1
-            }}>
+            <div className="login-card">
                 {/* Logo */}
                 <div className="flex justify-center mb-lg">
                     <div style={{
@@ -255,6 +244,39 @@ export default function LoginPage() {
             </div>
 
             <style>{`
+        .login-card {
+            max-width: 480px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+            overflow: hidden;
+        }
+        .login-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                115deg, 
+                rgba(255, 255, 255, 0.12) 0%, 
+                rgba(255, 255, 255, 0.08) 58%, 
+                transparent 58%
+            );
+            pointer-events: none;
+            z-index: 0;
+        }
+        .login-card > * {
+            position: relative;
+            z-index: 1;
+        }
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }

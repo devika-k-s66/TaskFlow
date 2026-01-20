@@ -556,7 +556,8 @@ export default function TasksPage() {
                         <div className="glass-clear" style={{
                             padding: isMobile ? '12px' : '18px 26px', marginBottom: '28px',
                             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                            borderRadius: '20px', position: 'relative', zIndex: 50
+                            borderRadius: '20px', position: 'relative', zIndex: 50,
+                            overflow: 'visible'
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                 <div style={{ width: '4px', height: '20px', background: '#4ade80', borderRadius: '2px' }} />
@@ -594,21 +595,19 @@ export default function TasksPage() {
                                                 style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }}
                                                 onClick={() => setShowFilterDropdown(false)}
                                             />
-                                            <div style={{
-                                                position: 'absolute',
-                                                top: '100%',
-                                                right: 0,
-                                                marginTop: '10px',
-                                                background: 'rgba(13, 14, 18, 0.98)',
-                                                border: '1px solid rgba(255, 255, 255, 0.15)',
-                                                borderRadius: '18px',
-                                                padding: '10px',
-                                                width: '220px',
-                                                zIndex: 100,
-                                                boxShadow: '0 25px 60px rgba(0,0,0,0.6)',
-                                                backdropFilter: 'blur(30px)',
-                                                animation: 'fadeIn 0.2s ease-out'
-                                            }}>
+                                            <div
+                                                className="dropdown-glass"
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '100%',
+                                                    right: 0,
+                                                    marginTop: '10px',
+                                                    borderRadius: '20px',
+                                                    padding: '10px',
+                                                    width: '220px',
+                                                    zIndex: 100,
+                                                    animation: 'fadeIn 0.2s ease-out'
+                                                }}>
                                                 {filters.map(filter => (
                                                     <div
                                                         key={filter.id}
@@ -623,7 +622,7 @@ export default function TasksPage() {
                                                             borderRadius: '12px',
                                                             cursor: 'pointer',
                                                             background: selectedFilter === filter.id ? 'rgba(255,255,255,0.1)' : 'transparent',
-                                                            color: selectedFilter === filter.id ? 'white' : 'rgba(255,255,255,0.6)',
+                                                            color: selectedFilter === filter.id ? 'white' : 'rgba(255,255,255,0.9)',
                                                             fontSize: '0.9rem',
                                                             display: 'flex',
                                                             justifyContent: 'space-between',
@@ -660,6 +659,14 @@ export default function TasksPage() {
                         </div>
                     </div>
                 </div>
+                <style>{`
+                .dropdown-glass {
+                    background: #11120D;
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+                    overflow: hidden;
+                }
+            `}</style>
             </div>
         </div>
     );

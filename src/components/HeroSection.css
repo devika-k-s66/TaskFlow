@@ -73,6 +73,12 @@
     z-index: 100;
 }
 
+.hero-navbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 /* Add relative positioning for mobile menu context */
 @media (max-width: 1024px) {
     .hero-navbar-wrapper {
@@ -87,7 +93,7 @@
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    padding: 6px 6px 6px clamp(15px, 4vw, 30px);
+    padding: 6px 3px 6px clamp(15px, 4vw, 30px);
     border-radius: 100px;
     display: flex;
     align-items: center;

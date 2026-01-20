@@ -23,28 +23,12 @@ const HeroSection: React.FC = () => {
                             <li><Link to="/about">About</Link></li>
                         </ul>
                         <div className="hero-navbar-actions">
-                            {user ? (
-                                <div
-                                    className="user-avatar"
-                                    onClick={() => navigate('/dashboard')}
-                                    title="Go to Dashboard"
-                                    style={{
-                                        ...(user?.photoURL ? { backgroundImage: `url(${user.photoURL})` } : {}),
-                                        backgroundSize: 'cover',
-                                        backgroundPosition: 'center',
-                                        cursor: 'pointer'
-                                    }}
-                                >
-                                    {!user?.photoURL && (user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U')}
+                            <button className="hero-contact-btn" onClick={() => navigate('/login')}>
+                                Sign In
+                                <div className="hero-contact-arrow">
+                                    <ArrowRight size={18} />
                                 </div>
-                            ) : (
-                                <button className="hero-contact-btn" onClick={() => navigate('/login')}>
-                                    Sign In
-                                    <div className="hero-contact-arrow">
-                                        <ArrowRight size={18} />
-                                    </div>
-                                </button>
-                            )}
+                            </button>
                             <button
                                 className="hero-mobile-toggle"
                                 onClick={() => setIsMenuOpen(!isMenuOpen)}

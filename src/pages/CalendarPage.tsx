@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckSquare, Bell, Clock, LayoutGrid, List, TrendingUp, Activity, Zap, Save, Library, Eye, X, Trash2, Edit2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, CheckSquare, Bell, Clock, LayoutGrid, List, TrendingUp, Activity, Zap, Save, Library, Eye, X, Trash2, Edit2, ArrowRight } from 'lucide-react';
 import { useTasks, useReminders, useTemplates } from '../hooks/useFirestore';
 import {
     format,
@@ -1561,9 +1561,36 @@ function PlanningPageView({
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                                     {item.type === 'task' ? (
                                                         <>
+                                                            {startOfDay(selectedDate) < startOfDay(new Date()) && !item.completed && !isDraft && (
+                                                                <button
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        if (window.confirm('Move this task to today?')) {
+                                                                            const today = new Date();
+                                                                            const [h, m] = format(item.start, 'HH:mm').split(':').map(Number);
+                                                                            const newStart = setHours(setMinutes(today, m), h);
+                                                                            const newEnd = addMinutesFn(newStart, item.duration);
+
+                                                                            await updateTask(item.id.replace('db_', ''), {
+                                                                                deadline: newStart,
+                                                                                endTime: newEnd
+                                                                            });
+                                                                            alert('Task moved to today.');
+                                                                        }
+                                                                    }}
+                                                                    title="Move to Today"
+                                                                    style={{ background: 'rgba(56, 189, 248, 0.2)', border: 'none', color: '#38bdf8', padding: '6px', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
+                                                                >
+                                                                    <ArrowRight size={14} />
+                                                                </button>
+                                                            )}
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
+                                                                    if (startOfDay(selectedDate) < startOfDay(new Date())) {
+                                                                        alert('Cannot edit tasks on past dates. Please move it to today first.');
+                                                                        return;
+                                                                    }
                                                                     setTitle(item.title);
                                                                     setDesc(item.description || '');
                                                                     setPriority(item.priority);
@@ -1571,7 +1598,15 @@ function PlanningPageView({
                                                                     setStartTime(item.start);
                                                                     setEditingTaskId(item.id);
                                                                 }}
-                                                                style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px', borderRadius: '6px', cursor: 'pointer' }}
+                                                                style={{
+                                                                    background: 'rgba(255,255,255,0.1)',
+                                                                    border: 'none',
+                                                                    color: 'white',
+                                                                    padding: '6px',
+                                                                    borderRadius: '6px',
+                                                                    cursor: startOfDay(selectedDate) < startOfDay(new Date()) ? 'not-allowed' : 'pointer',
+                                                                    opacity: startOfDay(selectedDate) < startOfDay(new Date()) ? 0.5 : 1
+                                                                }}
                                                             >
                                                                 <Edit2 size={14} />
                                                             </button>
@@ -1657,180 +1692,209 @@ function PlanningPageView({
 
                     {/* Right Column (Bottom on Mobile): Task Form */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '12px' : '16px' }}>
-                        <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
-                            <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Task Title</label>
-                            <input
-                                autoFocus
-                                className="planning-input"
-                                placeholder="What needs to be done?"
-                                value={title}
-                                onChange={e => setTitle(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    background: 'rgba(255,255,255,0.2)',
-                                    border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
-                                    color: 'white',
-                                    padding: isMobile ? '12px 14px' : '14px 18px',
-                                    borderRadius: isMobile ? '10px' : '12px',
-                                    fontSize: isMobile ? '0.95rem' : '1.1rem',
-                                    fontWeight: '700'
-                                }}
-                            />
-                        </div>
-
-                        <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
-                            <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Description (Optional)</label>
-                            <textarea
-                                placeholder="Add notes, links, or expectations..."
-                                value={desc}
-                                onChange={e => setDesc(e.target.value)}
-                                className="planning-input"
-                                style={{
-                                    width: '100%',
-                                    background: 'rgba(255,255,255,0.15)',
-                                    border: isMobile ? '1px solid rgba(255,255,255,0.25)' : '2px solid rgba(255,255,255,0.25)',
-                                    color: 'white',
-                                    padding: isMobile ? '12px 14px' : '14px 18px',
-                                    borderRadius: isMobile ? '10px' : '12px',
-                                    fontSize: isMobile ? '0.85rem' : '0.95rem',
-                                    minHeight: isMobile ? '80px' : '100px',
-                                    resize: 'vertical',
-                                    fontWeight: '500'
-                                }}
-                            />
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '12px' : '16px' }}>
-                            <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
-                                <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Priority</label>
-                                <div style={{ position: 'relative' }}>
-                                    <select
-                                        value={priority}
-                                        onChange={e => setPriority(e.target.value as Priority)}
+                        {startOfDay(selectedDate) < startOfDay(new Date()) ? (
+                            <div className="glass-card" style={{ padding: '30px', textAlign: 'center', border: '1px dashed rgba(255,255,255,0.2)' }}>
+                                <div style={{
+                                    width: '60px', height: '60px',
+                                    background: 'rgba(239, 68, 68, 0.1)',
+                                    borderRadius: '50%',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    margin: '0 auto 16px auto'
+                                }}>
+                                    <Clock size={32} color="#ef4444" />
+                                </div>
+                                <h3 style={{ margin: '0 0 8px 0', fontSize: '1.2rem', color: 'white' }}>Past Date Selected</h3>
+                                <p style={{ margin: 0, color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
+                                    You cannot add new tasks to past dates.
+                                    <br />
+                                    If you have pending tasks here, click the
+                                    <span style={{
+                                        display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                        width: '20px', height: '20px', background: 'rgba(56, 189, 248, 0.2)',
+                                        borderRadius: '4px', verticalAlign: 'middle', margin: '0 4px'
+                                    }}>
+                                        <ArrowRight size={12} color="#38bdf8" />
+                                    </span>
+                                    icon to move them to today.
+                                </p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                                    <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Task Title</label>
+                                    <input
+                                        autoFocus
                                         className="planning-input"
+                                        placeholder="What needs to be done?"
+                                        value={title}
+                                        onChange={e => setTitle(e.target.value)}
                                         style={{
                                             width: '100%',
                                             background: 'rgba(255,255,255,0.2)',
                                             border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
                                             color: 'white',
-                                            padding: isMobile ? '10px 14px' : '12px 18px',
+                                            padding: isMobile ? '12px 14px' : '14px 18px',
                                             borderRadius: isMobile ? '10px' : '12px',
-                                            fontSize: isMobile ? '0.85rem' : '0.95rem',
-                                            appearance: 'none',
-                                            cursor: 'pointer',
+                                            fontSize: isMobile ? '0.95rem' : '1.1rem',
                                             fontWeight: '700'
                                         }}
-                                    >
-                                        <option value="High" style={{ background: '#1e293b', color: 'white' }}>🔴 High</option>
-                                        <option value="Medium" style={{ background: '#1e293b', color: 'white' }}>🟡 Medium</option>
-                                        <option value="Low" style={{ background: '#1e293b', color: 'white' }}>🟢 Low</option>
-                                    </select>
-                                    <div style={{ position: 'absolute', right: isMobile ? '12px' : '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'white', opacity: 0.5, fontSize: '0.7rem' }}>
-                                        ▼
+                                    />
+                                </div>
+
+                                <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                                    <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Description (Optional)</label>
+                                    <textarea
+                                        placeholder="Add notes, links, or expectations..."
+                                        value={desc}
+                                        onChange={e => setDesc(e.target.value)}
+                                        className="planning-input"
+                                        style={{
+                                            width: '100%',
+                                            background: 'rgba(255,255,255,0.15)',
+                                            border: isMobile ? '1px solid rgba(255,255,255,0.25)' : '2px solid rgba(255,255,255,0.25)',
+                                            color: 'white',
+                                            padding: isMobile ? '12px 14px' : '14px 18px',
+                                            borderRadius: isMobile ? '10px' : '12px',
+                                            fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                            minHeight: isMobile ? '80px' : '100px',
+                                            resize: 'vertical',
+                                            fontWeight: '500'
+                                        }}
+                                    />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '12px' : '16px' }}>
+                                    <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                                        <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Priority</label>
+                                        <div style={{ position: 'relative' }}>
+                                            <select
+                                                value={priority}
+                                                onChange={e => setPriority(e.target.value as Priority)}
+                                                className="planning-input"
+                                                style={{
+                                                    width: '100%',
+                                                    background: 'rgba(255,255,255,0.2)',
+                                                    border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
+                                                    color: 'white',
+                                                    padding: isMobile ? '10px 14px' : '12px 18px',
+                                                    borderRadius: isMobile ? '10px' : '12px',
+                                                    fontSize: isMobile ? '0.85rem' : '0.95rem',
+                                                    appearance: 'none',
+                                                    cursor: 'pointer',
+                                                    fontWeight: '700'
+                                                }}
+                                            >
+                                                <option value="High" style={{ background: '#1e293b', color: 'white' }}>🔴 High</option>
+                                                <option value="Medium" style={{ background: '#1e293b', color: 'white' }}>🟡 Medium</option>
+                                                <option value="Low" style={{ background: '#1e293b', color: 'white' }}>🟢 Low</option>
+                                            </select>
+                                            <div style={{ position: 'absolute', right: isMobile ? '12px' : '16px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: 'white', opacity: 0.5, fontSize: '0.7rem' }}>
+                                                ▼
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
+                                        <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Duration (min)</label>
+                                        <input
+                                            type="number"
+                                            value={duration}
+                                            onChange={e => setDuration(parseInt(e.target.value) || 0)}
+                                            className="planning-input"
+                                            style={{
+                                                width: '100%',
+                                                background: 'rgba(255,255,255,0.2)',
+                                                border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
+                                                color: 'white',
+                                                padding: isMobile ? '10px 14px' : '12px 18px',
+                                                borderRadius: isMobile ? '10px' : '12px',
+                                                fontSize: isMobile ? '0.95rem' : '1.1rem',
+                                                fontWeight: '700'
+                                            }}
+                                        />
                                     </div>
                                 </div>
-                            </div>
-                            <div className="glass-card" style={{ padding: isMobile ? '12px' : '16px' }}>
-                                <label style={{ display: 'block', marginBottom: isMobile ? '6px' : '8px', color: 'white', fontWeight: '700', fontSize: isMobile ? '0.7rem' : '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.8 }}>Duration (min)</label>
-                                <input
-                                    type="number"
-                                    value={duration}
-                                    onChange={e => setDuration(parseInt(e.target.value) || 0)}
-                                    className="planning-input"
-                                    style={{
-                                        width: '100%',
-                                        background: 'rgba(255,255,255,0.2)',
-                                        border: isMobile ? '1px solid rgba(255,255,255,0.3)' : '2px solid rgba(255,255,255,0.3)',
-                                        color: 'white',
-                                        padding: isMobile ? '10px 14px' : '12px 18px',
-                                        borderRadius: isMobile ? '10px' : '12px',
-                                        fontSize: isMobile ? '0.95rem' : '1.1rem',
-                                        fontWeight: '700'
-                                    }}
-                                />
-                            </div>
-                        </div>
 
-                        <div className="glass-card" style={{ padding: isMobile ? '8px 12px' : '10px 14px', border: isMobile ? '1px solid rgba(255, 255, 255, 0.4)' : '2px solid rgba(255, 255, 255, 0.4)', background: 'rgba(255, 255, 255, 0.15)' }}>
-                            <label style={{ display: 'block', marginBottom: isMobile ? '4px' : '6px', color: 'white', fontWeight: '800', fontSize: isMobile ? '0.65rem' : '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9 }}>⏰ {isMobile ? 'Start' : 'Start Time'}</label>
-                            <div style={{ display: 'flex', gap: isMobile ? '6px' : '10px', alignItems: 'center' }}>
-                                <input
-                                    type="time"
-                                    className="planning-input"
-                                    value={startTime ? format(startTime, 'HH:mm') : ''}
-                                    onChange={e => {
-                                        if (!e.target.value) return;
-                                        const [h, m] = e.target.value.split(':').map(Number);
-                                        setStartTime(setHours(setMinutes(startOfDay(selectedDate), m), h));
-                                    }}
-                                    style={{
-                                        flex: 2,
-                                        minWidth: '100px',
-                                        background: 'rgba(255,255,255,0.25)',
-                                        border: isMobile ? '1px solid rgba(255,255,255,0.4)' : '2px solid rgba(255,255,255,0.4)',
-                                        color: 'white',
-                                        padding: isMobile ? '6px 10px' : '8px 12px',
-                                        borderRadius: isMobile ? '8px' : '10px',
-                                        fontSize: isMobile ? '0.9rem' : '1.05rem',
-                                        fontWeight: '800'
-                                    }}
-                                />
-                                <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.1)', padding: isMobile ? '4px 6px' : '6px 10px', borderRadius: isMobile ? '8px' : '10px' }}>
-                                    <span style={{ display: 'block', fontSize: '0.55rem', color: 'white', textTransform: 'uppercase', marginBottom: '1px', fontWeight: '700', opacity: 0.7 }}>Ends</span>
-                                    <span style={{ fontSize: isMobile ? '0.8rem' : '0.95rem', fontWeight: '900', color: 'white' }}>
-                                        {startTime ? format(addMinutesFn(startTime, duration), 'h:mm a') : '--:--'}
-                                    </span>
+                                <div className="glass-card" style={{ padding: isMobile ? '8px 12px' : '10px 14px', border: isMobile ? '1px solid rgba(255, 255, 255, 0.4)' : '2px solid rgba(255, 255, 255, 0.4)', background: 'rgba(255, 255, 255, 0.15)' }}>
+                                    <label style={{ display: 'block', marginBottom: isMobile ? '4px' : '6px', color: 'white', fontWeight: '800', fontSize: isMobile ? '0.65rem' : '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9 }}>⏰ {isMobile ? 'Start' : 'Start Time'}</label>
+                                    <div style={{ display: 'flex', gap: isMobile ? '6px' : '10px', alignItems: 'center' }}>
+                                        <input
+                                            type="time"
+                                            className="planning-input"
+                                            value={startTime ? format(startTime, 'HH:mm') : ''}
+                                            onChange={e => {
+                                                if (!e.target.value) return;
+                                                const [h, m] = e.target.value.split(':').map(Number);
+                                                setStartTime(setHours(setMinutes(startOfDay(selectedDate), m), h));
+                                            }}
+                                            style={{
+                                                flex: 2,
+                                                minWidth: '100px',
+                                                background: 'rgba(255,255,255,0.25)',
+                                                border: isMobile ? '1px solid rgba(255,255,255,0.4)' : '2px solid rgba(255,255,255,0.4)',
+                                                color: 'white',
+                                                padding: isMobile ? '6px 10px' : '8px 12px',
+                                                borderRadius: isMobile ? '8px' : '10px',
+                                                fontSize: isMobile ? '0.9rem' : '1.05rem',
+                                                fontWeight: '800'
+                                            }}
+                                        />
+                                        <div style={{ flex: 1, textAlign: 'center', background: 'rgba(255,255,255,0.1)', padding: isMobile ? '4px 6px' : '6px 10px', borderRadius: isMobile ? '8px' : '10px' }}>
+                                            <span style={{ display: 'block', fontSize: '0.55rem', color: 'white', textTransform: 'uppercase', marginBottom: '1px', fontWeight: '700', opacity: 0.7 }}>Ends</span>
+                                            <span style={{ fontSize: isMobile ? '0.8rem' : '0.95rem', fontWeight: '900', color: 'white' }}>
+                                                {startTime ? format(addMinutesFn(startTime, duration), 'h:mm a') : '--:--'}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
 
-                        <button
-                            onClick={handleAddToPlan}
-                            disabled={!title.trim() || !startTime || finalizeLoading}
-                            className="primary-btn"
-                            style={{
-                                marginTop: isMobile ? '6px' : '8px',
-                                background: (!title.trim() || !startTime) ? 'rgba(255,255,255,0.2)' : 'linear-gradient(135deg, #ffffff, #f0f0f0)',
-                                border: 'none',
-                                color: (!title.trim() || !startTime) ? 'rgba(255,255,255,0.5)' : '#667eea',
-                                padding: isMobile ? '14px 18px' : '18px 24px',
-                                borderRadius: isMobile ? '10px' : '12px',
-                                fontWeight: '900',
-                                fontSize: isMobile ? '0.95rem' : '1.15rem',
-                                cursor: (!title.trim() || !startTime) ? 'not-allowed' : 'pointer',
-                                boxShadow: (!title.trim() || !startTime) ? 'none' : '0 10px 30px rgba(255, 255, 255, 0.3)',
-                                textTransform: 'uppercase',
-                                letterSpacing: isMobile ? '0.5px' : '1px',
-                                width: '100%'
-                            }}
-                        >
-                            {editingTaskId ? '✓ Update Plan' : '✓ Add to Plan'}
-                        </button>
+                                <button
+                                    onClick={handleAddToPlan}
+                                    disabled={!title.trim() || !startTime || finalizeLoading}
+                                    className="primary-btn"
+                                    style={{
+                                        marginTop: isMobile ? '6px' : '8px',
+                                        background: (!title.trim() || !startTime) ? 'rgba(255,255,255,0.2)' : 'linear-gradient(135deg, #ffffff, #f0f0f0)',
+                                        border: 'none',
+                                        color: (!title.trim() || !startTime) ? 'rgba(255,255,255,0.5)' : '#667eea',
+                                        padding: isMobile ? '14px 18px' : '18px 24px',
+                                        borderRadius: isMobile ? '10px' : '12px',
+                                        fontWeight: '900',
+                                        fontSize: isMobile ? '0.95rem' : '1.15rem',
+                                        cursor: (!title.trim() || !startTime) ? 'not-allowed' : 'pointer',
+                                        boxShadow: (!title.trim() || !startTime) ? 'none' : '0 10px 30px rgba(255, 255, 255, 0.3)',
+                                        textTransform: 'uppercase',
+                                        letterSpacing: isMobile ? '0.5px' : '1px',
+                                        width: '100%'
+                                    }}
+                                >
+                                    {editingTaskId ? '✓ Update Plan' : '✓ Add to Plan'}
+                                </button>
 
-                        {sessionTasks.length > 0 && (
-                            <button
-                                onClick={handleFinalizeSchedule}
-                                disabled={finalizeLoading}
-                                style={{
-                                    marginTop: '8px',
-                                    background: 'linear-gradient(135deg, #FFD700, #FFA500)',
-                                    border: 'none',
-                                    color: '#0f172a',
-                                    padding: isMobile ? '14px 18px' : '16px 20px',
-                                    borderRadius: isMobile ? '10px' : '12px',
-                                    fontWeight: '900',
-                                    fontSize: isMobile ? '0.9rem' : '1rem',
-                                    cursor: 'pointer',
-                                    width: '100%',
-                                    boxShadow: '0 6px 20px rgba(255, 215, 0, 0.3)',
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '1px'
-                                }}
-                            >
-                                {finalizeLoading ? 'Saving...' : 'SAVE'}
-                            </button>
+                                {sessionTasks.length > 0 && (
+                                    <button
+                                        onClick={handleFinalizeSchedule}
+                                        disabled={finalizeLoading}
+                                        style={{
+                                            marginTop: '8px',
+                                            background: 'linear-gradient(135deg, #FFD700, #FFA500)',
+                                            border: 'none',
+                                            color: '#0f172a',
+                                            padding: isMobile ? '14px 18px' : '16px 20px',
+                                            borderRadius: isMobile ? '10px' : '12px',
+                                            fontWeight: '900',
+                                            fontSize: isMobile ? '0.9rem' : '1rem',
+                                            cursor: 'pointer',
+                                            width: '100%',
+                                            boxShadow: '0 6px 20px rgba(255, 215, 0, 0.3)',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '1px'
+                                        }}
+                                    >
+                                        {finalizeLoading ? 'Saving...' : 'SAVE'}
+                                    </button>
+                                )}
+                            </>
                         )}
-
                         {/* Save as Template Section - Only on Mobile, After Schedule Button */}
                         {isMobile && (
                             <div className="glass-card" style={{ marginTop: '16px' }}>
